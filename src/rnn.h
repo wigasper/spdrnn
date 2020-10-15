@@ -29,7 +29,9 @@ class RNN {
 	    bh = gen_zeros_matrix(hidden_dim, 1);
 	    by = gen_zeros_matrix(output_dim, 1);
 	}
-
+	
+	// x is a matrix where each col is a feature and each
+	// row is a 
 	std::tuple<matrix, matrix> forward(matrix &x) {
 	    size_t whh_n_rows = std::get<0>(whh).size() / std::get<1>(whh);
 	    matrix h = gen_zeros_matrix(whh_n_rows, 1);
@@ -37,7 +39,7 @@ class RNN {
 	    std::vector<element_type> x_vals = std::get<0>(x);
 	    dim x_dim = std::get<1>(x);
 	    
-	    size_t x_n_rows = x_vals.size() / x_dim;
+	    //size_t x_n_rows = x_vals.size() / x_dim;
 	    
 	    /// for backwards phase
 	    prior_inputs = x;
@@ -45,21 +47,23 @@ class RNN {
 	    prior_hs = transpose(h);
 	    //append_rows(prior_hs, h);
 
-	    for (size_t row = 0; row < x_n_rows; row++) {
+	    for (size_t col = 0; col < x_dim; col++) {
 		// avoid memory allocation here/
-		matrix x_row = get_row(x, row);
+		matrix x_col = get_col(x, col);
 
-		matrix sum = dot(wxh, x_row);
+		matrix sum = dot(wxh, x_col);
 		matrix t_1 = dot(whh, h);
 		add_in_place(sum, t_1);
 		add_in_place(sum, h);
 
 		tanh_e_wise(sum);
+		// h then is 
 		h = sum;
 
 		/// for backwards phase
 		// possibly need to figure this out, make more efficient
-		append_rows(prior_hs, transpose(h));
+		//matrix h_T = transpose(h);
+		append_cols(prior_hs, h);
 	    }
 	    
 	    matrix y = dot(why, h);
@@ -86,12 +90,15 @@ class RNN {
 	    dim dbh_dim = std::get<1>(bh);
 	    matrix dbh = gen_zeros_matrix(std::get<0>(bh).size() / dbh_dim, dbh_dim);
 
+	    matrix dh = dot(transpose(why), dy);
 
-
-
-		
+	    // backpropagate	
 	    for (size_t idx = n_rows; idx > -1; idx--) {
-		
+		// temp 
+		// 1 - get_row(prior_hs, n_rows) ** 2)
+		matrix h_row = get_row(prior_hs, n_rows);
+		pow_e_wise(h_row, 2L);
+		add_e_wise(h_row, -1);
 	    }
 	}
 };
