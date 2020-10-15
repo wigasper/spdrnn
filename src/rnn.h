@@ -32,6 +32,8 @@ class RNN {
 	
 	// x is a matrix where each col is a feature and each
 	// row is a 
+	//
+	// y is dim output_dim x 1
 	std::tuple<matrix, matrix> forward(matrix &x) {
 	    size_t whh_n_rows = std::get<0>(whh).size() / std::get<1>(whh);
 	    matrix h = gen_zeros_matrix(whh_n_rows, 1);
@@ -75,6 +77,7 @@ class RNN {
 
 	// dy matrix will have dim m x 1
 	void backward(matrix &dy) {
+	    double learning_rate = 0.02;
 	    size_t n_rows = std::get<0>(prior_inputs).size() / std::get<1>(prior_inputs);
 
 	    matrix dwhy = dot(dy, get_row(prior_hs, n_rows));
@@ -94,12 +97,65 @@ class RNN {
 
 	    // backpropagate	
 	    for (size_t idx = n_rows; idx > -1; idx--) {
-		// temp 
-		// 1 - get_row(prior_hs, n_rows) ** 2)
+		// dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
+		matrix h_row_temp = get_row(prior_hs, n_rows);
+		pow_e_wise(h_row_temp, 2L);
+		// this mult then add could be condensed to 1 op, scalar - matrix
+		multiply_scalar(h_row_temp, -1);
+		add_scalar(h_row_temp, 1);
+		multiply(h_row_temp, dh);
+		
+		add_in_place(dbh, h_row_temp);
+
 		matrix h_row = get_row(prior_hs, n_rows);
-		pow_e_wise(h_row, 2L);
-		add_e_wise(h_row, -1);
+
+		add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
+		
+		add_in_place(dwxh, dot(h_row_temp, transpose(h_row)));
+
+		dh = dot(whh, h_row_temp);
 	    }
+	    // clip
+	    clip(dwxh, -1, 1);
+	    clip(dwhh, -1, 1);
+	    clip(dwhy, -1, 1);
+	    clip(dbh, -1, 1);
+	    clip(dby, -1, 1);
+	    
+	    // update weights and biases
+	    multiply_scalar(dwhh, learning_rate);
+	    subtract_in_place(whh, dwhh);
+
+	    multiply_scalar(dwxh, learning_rate);
+	    subtract_in_place(wxh, dwxh);
+
+	    multiply_scalar(dwhy, learning_rate);
+	    subtract_in_place(why, dwhy);
+
+	    multiply_scalar(dbh, learning_rate);
+	    subtract_in_place(bh, dbh);
+
+	    multiply_scalar(dby, learning_rate);
+	    subtract_in_place(by, dby);
+	}
+
+	double loss(matrix &x, matrix &y) {
+	    std::tuple<matrix, matrix> result = forward(x);
+	    matrix out = std::get<0>(result);
+	    
+	    softmax_in_place(out);
+
+	    std::vector<element_type> out_vals = std::get<0>(out);
+
+	    double loss = 0.0;
+
+	    for (element_type val : out_vals) {
+		
+	    }
+	}
+
+	double total_loss() {
+
 	}
 };
 

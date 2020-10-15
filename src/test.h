@@ -66,5 +66,21 @@ void test_routine() {
     std::cout << "ewise mult of the two above\n";
     multiply(e, f);
     print_matrix(e);
+
+    std::vector<element_type> h_vals {1,2,3,4,5,6};
+    matrix h = std::make_tuple(h_vals, 3);
+
+    std::vector<element_type> i_vals {2,3,4,5,6,7};
+    matrix i = std::make_tuple(i_vals, 3);
+    
+    std::cout<<"i:\n";
+    print_matrix(i);
+
+    matrix j = dot(h, transpose(i));
+    print_matrix(j);
+    
+    print_matrix(i);
+    clip(i, 3, 6);
+    print_matrix(i);
 }
 

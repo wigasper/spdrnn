@@ -184,6 +184,36 @@ void add_in_place(matrix &a, const matrix &b) {
     }
 }
 
+void subtract_in_place(matrix &a, const matrix &b) {
+    dim *a_dim = &std::get<1>(a);
+    std::vector<element_type> *a_vals = &std::get<0>(a);
+    size_t a_n_rows = (*a_vals).size() / *a_dim;
+
+    dim b_dim = std::get<1>(b);
+    std::vector<element_type> b_vals = std::get<0>(b);
+    size_t b_n_rows = std::get<0>(b).size() / b_dim; 
+    
+    if (*a_dim == b_dim && a_n_rows == b_n_rows) {
+	for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
+	    (*a_vals).at(idx) = ((*a_vals).at(idx) - b_vals.at(idx));
+	}	    
+    } else {
+	// TODO: exception
+    }
+}
+
+void clip(matrix &m, size_t min, size_t max) {
+    std::vector<element_type> *m_vals = &std::get<0>(m);
+
+    for (size_t idx = 0; idx < (*m_vals).size(); idx++) {
+	if ((*m_vals).at(idx) < min) {
+	    (*m_vals).at(idx) = min;
+	} else if ((*m_vals).at(idx) > max) {
+	    (*m_vals).at(idx) = max;
+	}
+    }
+}
+/*
 // NOTE: currently unused. could be in place
 matrix subtract(const matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
@@ -210,7 +240,7 @@ matrix subtract(const matrix &a, const matrix &b) {
     size_t n_rows = std::get<0>(a).size() / a_dim;
     
     return std::make_tuple(vals_out, a_dim); 
-}
+}*/
 
 void pow_e_wise(matrix &m, const double power) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
@@ -220,13 +250,22 @@ void pow_e_wise(matrix &m, const double power) {
     }
 }
 
-void add_e_wise(matrix &m, const double term) {
+void add_scalar(matrix &m, const double scalar) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
     for (size_t idx = 0; idx < (*m_vals).size(); idx++) {
-	(*m_vals).at(idx) = (*m_vals).at(idx) + term;
+	(*m_vals).at(idx) = (*m_vals).at(idx) + scalar;
     }
 }
+
+void multiply_scalar(matrix &m, const double scalar) {
+    std::vector<element_type> *m_vals = &std::get<0>(m);
+
+    for (size_t idx = 0; idx < (*m_vals).size(); idx++) {
+	(*m_vals).at(idx) = (*m_vals).at(idx) * scalar;
+    }
+}
+
 
 // element-wise multiplication applied to the first
 void multiply(matrix &a, const matrix &b) {
@@ -303,6 +342,4 @@ void append_rows(matrix &a, const matrix &b) {
     } else {
 	std::cout << "utils::append_matrix - a_dim != b_dim!!!!";
     }
-
-
 }
