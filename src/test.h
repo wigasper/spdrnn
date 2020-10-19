@@ -7,9 +7,12 @@ void test_routine() {
     matrix a = std::make_tuple(a_vals, 3);
 
     print_matrix(a);
+    matrix gg = a;
 
     tanh_e_wise(a);
-
+    
+    std::cout << "gg after tanh_e_wise:\n";
+    print_matrix(gg);
     print_matrix(a); 
 
     std::vector<element_type> b_vals {1,2,3,4,5,6};

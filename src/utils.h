@@ -3,10 +3,33 @@
 #include <stdlib.h>
 #include <tuple>
 #include <math.h>
+#include <string>
+#include <regex>
+#include <fstream>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 typedef double element_type;
 typedef size_t dim;
 typedef std::tuple<std::vector<element_type>, dim> matrix;
+
+void print_matrix(const matrix &m) {
+    std::vector<element_type> vals = std::get<0>(m);
+    dim dimension = std::get<1>(m);
+    
+    size_t idx = 0;
+
+    for (element_type val : vals) {
+	std::cout << val << " ";
+	idx++;
+
+	if (idx % dimension == 0) {
+	    std::cout << "\n";
+	}
+    }
+    std::cout << "\n";
+}
+
 
 matrix gen_random_matrix(size_t m, size_t n) {
     std::vector<element_type> vals_out;
@@ -30,6 +53,9 @@ matrix gen_zeros_matrix(size_t m, size_t n) {
 }
 
 matrix dot(const matrix &a, const matrix &b) {
+    //print_matrix(a);
+    //print_matrix(b);
+
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
 
@@ -48,6 +74,8 @@ matrix dot(const matrix &a, const matrix &b) {
     if (a_dim != std::get<0>(b).size() / b_dim) {
 	// this is fairly improper
 	std::cout << "utils::dot - matrices are not comformable\n";
+	std::cout << "matrix a: " << a_vals.size() / a_dim << " x " << a_dim <<"\n";
+	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
     } else {
 	// is there a faster way to do this??
 	for (size_t row = 0; row < n_rows; row++) {
@@ -79,24 +107,6 @@ void tanh_e_wise(matrix &a) {
 	(*a_vals).at(idx) = tanh((*a_vals).at(idx));
     }
 }
-
-void print_matrix(const matrix &m) {
-    std::vector<element_type> vals = std::get<0>(m);
-    dim dimension = std::get<1>(m);
-    
-    size_t idx = 0;
-
-    for (element_type val : vals) {
-	std::cout << val << " ";
-	idx++;
-
-	if (idx % dimension == 0) {
-	    std::cout << "\n";
-	}
-    }
-    std::cout << "\n";
-}
-
 matrix transpose(matrix &m) {
     std::vector<element_type> m_vals = std::get<0>(m);
     dim m_dim = std::get<1>(m);
@@ -128,7 +138,7 @@ matrix get_row(const matrix &m, const size_t &i) {
 	vec_out.push_back(*iter);
     }
 
-    return std::make_tuple(vec_out, 1);
+    return std::make_tuple(vec_out, m_dim);
 }
 
 // returns a mx1 matrix
@@ -283,6 +293,8 @@ void multiply(matrix &a, const matrix &b) {
 	}
     } else {
 	std::cout << "big problem";
+	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
+	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
     }
 }
 
@@ -296,16 +308,19 @@ matrix append_cols(matrix &a, const matrix &b) {
     size_t b_n_rows = b_vals.size() / b_dim;
     
     std::vector<element_type> vals_out;
-
-    for (size_t row = 0; row < a_n_rows; row++) {
-	for (size_t a_idx = row * a_dim; a_idx < row * a_dim + a_dim; a_idx++) {
-	    vals_out.push_back(a_vals.at(a_idx));
+    
+    if (b_n_rows == a_n_rows ) {
+	for (size_t row = 0; row < a_n_rows; row++) {
+	    for (size_t a_idx = row * a_dim; a_idx < row * a_dim + a_dim; a_idx++) {
+		vals_out.push_back(a_vals.at(a_idx));
+	    }
+	    for (size_t b_idx = row * b_dim; b_idx < row * b_dim + b_dim; b_idx++) {
+		vals_out.push_back(b_vals.at(b_idx));
+	    }
 	}
-	for (size_t b_idx = row * b_dim; b_idx < row * b_dim + b_dim; b_idx++) {
-	    vals_out.push_back(b_vals.at(b_idx));
-	}
+    } else {
+	std::cout << "utils::append_cols - a_n_rows != b_n_rows !!!\n";
     }
-
     return std::make_tuple(vals_out, a_dim + b_dim);
     /* sidebarring this - probably possible but all these inserts
      * probably make it not even worth it
@@ -342,4 +357,104 @@ void append_rows(matrix &a, const matrix &b) {
     } else {
 	std::cout << "utils::append_matrix - a_dim != b_dim!!!!";
     }
+}
+
+
+std::string trim_whitespace(std::string a_string) {
+    size_t first = a_string.find_first_not_of(' ');
+    if (first == std::string::npos) {
+        return "";
+    }
+    size_t last = a_string.find_last_not_of(' ');
+    return a_string.substr(first, (last - first + 1));
+}
+
+// parses a single line of a whitespace delimited input
+// file
+std::vector<std::string> parse_line(std::string line) {
+    std::vector<std::string> vec_out;
+    std::string delim = "|";
+
+    std::regex delim_regex(",");
+    line = std::regex_replace(line, delim_regex, delim);
+    
+    size_t index = 0;
+    
+    std::string element;
+    std::string trimmed_element;
+
+    while ((index = line.find(delim)) != std::string::npos) {
+        element = line.substr(0, index);
+        
+        trimmed_element = trim_whitespace(element);
+        if (!trimmed_element.empty()) {
+            vec_out.push_back(trim_whitespace(element));
+        }
+
+        line.erase(0, index + delim.length());
+    }
+    
+    trimmed_element = trim_whitespace(line);
+    if (!trimmed_element.empty()) {
+	vec_out.push_back(line);
+    }
+
+    return vec_out;
+}
+
+
+// loads in the matrix from a string representing a file path
+// TODO: currently only setup for mock data
+std::tuple<matrix, matrix> load(std::string file_path) {
+    bool dimension_known = false;
+    dim dimension;
+    //std::cout<<file_path<<"\n";
+    std::vector<element_type> x_vals;
+    std::vector<element_type> y_vals;
+
+    std::fstream file_in;
+
+    file_in.open(file_path, std::ios::in);
+
+    std::string line;
+
+    while (getline(file_in, line)) {
+        std::vector<std::string> elements = parse_line(line);
+        
+        if (!dimension_known) {
+            dimension = elements.size();
+            dimension_known = true;
+        } else {
+            if (elements.size() != dimension) {
+                // TODO: make this fail the program
+                printf("Not every row has same dimension as first row\n");
+            }
+        }
+	
+	if (elements.size() == 2) {
+	    //std::cout << std::stod(elements.at(0))
+	    x_vals.push_back(std::stod(elements.at(0)));
+	    y_vals.push_back(std::stod(elements.at(1)));
+	}
+    }
+    matrix x = std::make_tuple(x_vals, 1);
+    matrix y = std::make_tuple(y_vals, 1);
+    
+    //print_matrix(x);
+    //print_matrix(y);
+    return std::make_tuple(x, y);
+}
+
+std::tuple<std::vector<matrix>, std::vector<matrix>> load_from_dir(std::string dir_path) {
+    std::vector<matrix> X;
+    std::vector<matrix> Y;
+    
+    std::cout << "starting load loop\n";
+    for (const auto &entry : fs::directory_iterator(dir_path)) {
+	std::tuple<matrix, matrix> matrices = load(entry.path().string());
+	X.push_back(std::get<0>(matrices));
+	Y.push_back(std::get<1>(matrices));
+    }
+    
+    return std::make_tuple(X, Y);
 }
