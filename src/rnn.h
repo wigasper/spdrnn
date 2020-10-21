@@ -98,8 +98,8 @@ class RNN {
 	}
 
 	// dy has dim n_samples x output_dim
-	void backward(matrix &dy) {
-	    double learning_rate = 0.0005;
+	void backward(matrix &dy, double learning_rate) {
+	    //double learning_rate = 0.005;
 	    size_t n_rows = std::get<0>(prior_inputs).size() / std::get<1>(prior_inputs);
 
 	    //matrix dwhy = dot(dy, get_row(prior_hs, n_rows));
@@ -184,11 +184,11 @@ class RNN {
 	    multiply_scalar(dby, (1.0 / n));
 
 	    // clip
-	    //clip(dwxh, -1, 1);
-	    //clip(dwhh, -1, 1);
-	    //clip(dwhy, -1, 1);
-	    //clip(dbh, -1, 1);
-	    //clip(dby, -1, 1);
+	    clip(dwxh, -1, 1);
+	    clip(dwhh, -1, 1);
+	    clip(dwhy, -1, 1);
+	    clip(dbh, -1, 1);
+	    clip(dby, -1, 1);
 	    
 	    // update weights and biases, using avg of gradient updates
 	    multiply_scalar(dwhh, learning_rate);
@@ -211,7 +211,7 @@ class RNN {
 	// binary cross-entropy
 	// y dim = (output_dim x 1)
 	// forward output dim = (output_dim x 1)
-	double loss(const matrix &x, const matrix &y, const bool flag) {
+	double loss(const matrix &x, const matrix &y) {
 	    //std::cout<<"forward call\n";
 	    std::tuple<matrix, matrix> result = forward(x);
 	    // predictions
@@ -220,11 +220,6 @@ class RNN {
 	    // not sure about this softmax
 	    //softmax_in_place(out);
 	    sigmoid(out);
-
-	    if (flag) {
-		    std::cout<<"printing forward probs:\n";
-		    print_matrix(out);
-	    }
 
         clip(out, 0.0001, 0.99999999);
 
@@ -249,12 +244,11 @@ class RNN {
 	    return -1 * loss / y_vals.size();
 	}
 	
-	double total_loss(const std::vector<matrix> &X, const std::vector<matrix> &Y,
-		const bool flag) {
+	double total_loss(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
 	    double l = 0.0;
 
 	    for (size_t idx = 0; idx < Y.size(); idx++) {
-		    l += loss(X.at(idx), Y.at(idx), flag);
+		    l += loss(X.at(idx), Y.at(idx));
 	    }
 
 	    return l / Y.size();
@@ -262,12 +256,20 @@ class RNN {
 
 	void train(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
 	    size_t num_epochs = 100;
-	    
-	    //std::vector<element_type> y_vals = std::get<0>(y);
+	    double learning_rate = 0.0001;
+
+	    std::vector<double> losses;
 
 	    for (size_t epoch = 0; epoch < num_epochs; epoch++) {
             if (epoch > 1) {
-                std::cout << "Total loss: " << total_loss(X, Y, false) << "\n";
+                double this_loss = total_loss(X, Y);
+                std::cout << "Total loss: " << this_loss << "\n";
+
+                if (losses.size() > 1 && this_loss > losses.back()) {
+                    learning_rate = learning_rate * 0.5;
+                }
+
+                losses.push_back(this_loss);
             }
             // for each training example
             for (size_t idx = 0; idx < Y.size(); idx++) {
@@ -275,7 +277,7 @@ class RNN {
 
                 // tuple is y, h
                 matrix dldy = std::get<0>(forward_res);
-                softmax_in_place(dldy);
+                sigmoid(dldy);
 
                 matrix y = Y.at(idx);
 
@@ -285,7 +287,7 @@ class RNN {
                 //size_t num_timesteps = std::get<0>(dldy).size();
                 //dldy = transpose(dldy);
                 //for
-                backward(dldy);
+                backward(dldy, learning_rate);
             }
 	    }
 	}
