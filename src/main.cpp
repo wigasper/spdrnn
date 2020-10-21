@@ -3,7 +3,7 @@
 #include "test.h"
 
 int main(int argc, char **argv) {
-    test_routine();
+    //test_routine();
 
     std::cout << "model init\n";
     RNN model = RNN(1, 1, 64);

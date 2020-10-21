@@ -21,6 +21,8 @@ class RNN {
 	// shape
 	matrix prior_hs;
 
+	int bptt_stop = 4;
+
 	RNN(size_t input_dim, size_t output_dim, size_t hidden_dim) {
 	    whh = gen_random_matrix(hidden_dim, hidden_dim, hidden_dim);
 	    wxh = gen_random_matrix(hidden_dim, input_dim, input_dim);
@@ -28,7 +30,6 @@ class RNN {
 
 	    bh = gen_zeros_matrix(hidden_dim, 1);
 	    by = gen_zeros_matrix(output_dim, 1);
-
 	}
 	
 	// x is a matrix where each col is a feature and each
@@ -98,14 +99,14 @@ class RNN {
 
 	// dy has dim n_samples x output_dim
 	void backward(matrix &dy) {
-	    double learning_rate = 0.02;
+	    double learning_rate = 0.0005;
 	    size_t n_rows = std::get<0>(prior_inputs).size() / std::get<1>(prior_inputs);
 
 	    //matrix dwhy = dot(dy, get_row(prior_hs, n_rows));
 	    //matrix dby = dy;
 	    
 	    matrix dby;
-	    matrix dwhy;
+	    matrix dwhy = gen_zeros_matrix(1, 64);
 	    // get shapes
 	    dim dwhh_dim = std::get<1>(whh);
 	    matrix dwhh = gen_zeros_matrix(std::get<0>(whh).size() / dwhh_dim, dwhh_dim);
@@ -116,37 +117,61 @@ class RNN {
 	    dim dbh_dim = std::get<1>(bh);
 	    matrix dbh = gen_zeros_matrix(std::get<0>(bh).size() / dbh_dim, dbh_dim);
 
-	    matrix dh = dot(transpose(why), get_row(dy, n_rows));
+	    //matrix dh = dot(transpose(why), get_row(dy, n_rows));
 
 	    // backpropagate	
-	    for (int idx = n_rows; idx >= 0; idx--) {
+	    for (int t_step = n_rows; t_step >= 0; t_step--) {
 	        //
-            dby = get_row(dy, idx);
-            matrix last_h = get_col(prior_hs, idx);
-            dwhy = dot(dby, transpose(last_h));
+            matrix dh = dot(transpose(why), get_row(dy, t_step));
+
+            dby = get_row(dy, t_step);
+            matrix last_h = get_col(prior_hs, t_step);
+            //dwhy = dot(dby, transpose(last_h));
+            add_in_place(dwhy, dot(dby, transpose(last_h)));
 
             // dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
-
-            matrix h_row_temp = get_col(prior_hs, idx);
-
+            matrix h_row_temp = get_col(prior_hs, t_step);
             pow_e_wise(h_row_temp, 2L);
             // this mult then add could be condensed to 1 op, scalar - matrix
             multiply_scalar(h_row_temp, -1);
             add_scalar(h_row_temp, 1);
-
             multiply(h_row_temp, dh);
-
             add_in_place(dbh, h_row_temp);
-
-            matrix h_row = get_col(prior_hs, idx);
-
+            matrix h_row = get_col(prior_hs, t_step);
             add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
-
-            matrix prior_input = get_row(prior_inputs, idx);
-
+            matrix prior_input = get_row(prior_inputs, t_step);
             add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
-
             dh = dot(whh, h_row_temp);
+
+            // TODO: do this better
+            int hard_stop = t_step - bptt_stop;
+            if (t_step - 1 - bptt_stop < -1) {
+                hard_stop = -1;
+            }
+
+            for (int idx = t_step - 1; idx > hard_stop; idx--) {
+                matrix dby_temp = get_row(dy, idx);
+                matrix last_h = get_col(prior_hs, idx);
+                //matrix dwhy_temp = dot(dby, transpose(last_h));
+                add_in_place(dwhy, dot(dby, transpose(last_h)));
+
+                // dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
+                matrix h_row_temp = get_col(prior_hs, idx);
+                pow_e_wise(h_row_temp, 2L);
+                // this mult then add could be condensed to 1 op, scalar - matrix
+                multiply_scalar(h_row_temp, -1);
+                add_scalar(h_row_temp, 1);
+                multiply(h_row_temp, dh);
+                add_in_place(dbh, h_row_temp);
+                matrix h_row = get_col(prior_hs, idx);
+                add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
+                matrix prior_input = get_row(prior_inputs, idx);
+                add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
+                dh = dot(whh, h_row_temp);
+
+                //add_in_place(dwhy, dwhy_temp);
+                add_in_place(dby, dby_temp);
+            }
 
 	    }
 	    // avg gradient updates
@@ -156,14 +181,14 @@ class RNN {
 	    multiply_scalar(dwxh, (1.0 / n));
 	    multiply_scalar(dwhy, (1.0 / n));
 	    multiply_scalar(dbh, (1.0 / n));
-	    //multiply_scalar(dby, (1.0 / n));
+	    multiply_scalar(dby, (1.0 / n));
 
 	    // clip
-	    clip(dwxh, -1, 1);
-	    clip(dwhh, -1, 1);
-	    clip(dwhy, -1, 1);
-	    clip(dbh, -1, 1);
-	    clip(dby, -1, 1);
+	    //clip(dwxh, -1, 1);
+	    //clip(dwhh, -1, 1);
+	    //clip(dwhy, -1, 1);
+	    //clip(dbh, -1, 1);
+	    //clip(dby, -1, 1);
 	    
 	    // update weights and biases, using avg of gradient updates
 	    multiply_scalar(dwhh, learning_rate);
@@ -232,7 +257,7 @@ class RNN {
 		    l += loss(X.at(idx), Y.at(idx), flag);
 	    }
 
-	    return -1 * l / Y.size();
+	    return l / Y.size();
 	}
 
 	void train(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
@@ -241,26 +266,27 @@ class RNN {
 	    //std::vector<element_type> y_vals = std::get<0>(y);
 
 	    for (size_t epoch = 0; epoch < num_epochs; epoch++) {
-		
-		if (epoch > 1) {	
-		    std::cout << "Total loss: " << total_loss(X, Y, false) << "\n";
-		}
-		// for each training example
-		for (size_t idx = 0; idx < Y.size(); idx++) {
-		    std::tuple<matrix, matrix> forward_res = forward(X.at(idx));
-		    
-		    // tuple is y, h
-		    matrix dldy = std::get<0>(forward_res);
-		    softmax_in_place(dldy);
+            if (epoch > 1) {
+                std::cout << "Total loss: " << total_loss(X, Y, false) << "\n";
+            }
+            // for each training example
+            for (size_t idx = 0; idx < Y.size(); idx++) {
+                std::tuple<matrix, matrix> forward_res = forward(X.at(idx));
 
-		    subtract_in_place(dldy, Y.at(idx));
-		    
-		    // for each timestep
-		    //size_t num_timesteps = std::get<0>(dldy).size();
-		    //dldy = transpose(dldy);
-		    //for 
-		    backward(dldy);
-		}
+                // tuple is y, h
+                matrix dldy = std::get<0>(forward_res);
+                softmax_in_place(dldy);
+
+                matrix y = Y.at(idx);
+
+                subtract_in_place(dldy, Y.at(idx));
+
+                // for each timestep
+                //size_t num_timesteps = std::get<0>(dldy).size();
+                //dldy = transpose(dldy);
+                //for
+                backward(dldy);
+            }
 	    }
 	}
 
