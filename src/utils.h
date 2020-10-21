@@ -5,6 +5,7 @@
 #include <math.h>
 #include <string>
 #include <regex>
+#include <random>
 #include <fstream>
 #include <filesystem>
 namespace fs = std::filesystem;
@@ -30,13 +31,18 @@ void print_matrix(const matrix &m) {
     std::cout << "\n";
 }
 
-
-matrix gen_random_matrix(size_t m, size_t n) {
+matrix gen_random_matrix(size_t m, size_t n, size_t prior_layer_dim) {
     std::vector<element_type> vals_out;
 
+    element_type min = -1 * (1 / sqrt(prior_layer_dim));
+    element_type max = 1 / sqrt(prior_layer_dim);
+
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::uniform_real_distribution<element_type> distribution(min, max);
+
     for (size_t _idx = 0; _idx < (m * n); _idx++) {
-	element_type val = (rand() % 100 + 1) / 3013;
-	vals_out.push_back(val);
+	    vals_out.push_back(distribution(generator));
     }
 
     return std::make_tuple(vals_out, n);
@@ -151,27 +157,35 @@ matrix get_col(const matrix &m, const size_t &j) {
     size_t n_rows = m_vals.size() / m_dim;
 
     for (size_t row = 0; row < n_rows; row++) {
-	vals_out.push_back(row * m_dim + j);
+	    vals_out.push_back(m_vals.at(row * m_dim + j));
     }
 
     return std::make_tuple(vals_out, 1);
+}
+
+void sigmoid(matrix &a) {
+    std::vector<element_type> *a_vals = &std::get<0>(a);
+
+    for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
+        (*a_vals).at(idx) = 1 / (1 + exp(-1 * ((*a_vals).at(idx))));
+    }
 }
 
 void softmax_in_place(matrix &a) {
     std::vector<element_type> *a_vals = &std::get<0>(a);
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	(*a_vals).at(idx) = exp((*a_vals).at(idx));
+	    (*a_vals).at(idx) = exp((*a_vals).at(idx));
     }
 
     double sum = 0.0;
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	sum += (*a_vals).at(idx);
+	    sum += (*a_vals).at(idx);
     }
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	(*a_vals).at(idx) = (*a_vals).at(idx) / sum;
+	    (*a_vals).at(idx) = (*a_vals).at(idx) / sum;
     }
 
 }
@@ -186,11 +200,13 @@ void add_in_place(matrix &a, const matrix &b) {
     size_t b_n_rows = std::get<0>(b).size() / b_dim; 
     
     if (*a_dim == b_dim && a_n_rows == b_n_rows) {
-	for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	    (*a_vals).at(idx) = ((*a_vals).at(idx) + b_vals.at(idx));
-	}	    
+        for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
+            (*a_vals).at(idx) = ((*a_vals).at(idx) + b_vals.at(idx));
+        }
     } else {
-	// TODO: exception
+        std::cout << "utils::add_in_place - matrices are not same dims\n";
+        std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
+        std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
     }
 }
 
@@ -204,24 +220,27 @@ void subtract_in_place(matrix &a, const matrix &b) {
     size_t b_n_rows = std::get<0>(b).size() / b_dim; 
     
     if (*a_dim == b_dim && a_n_rows == b_n_rows) {
-	for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	    (*a_vals).at(idx) = ((*a_vals).at(idx) - b_vals.at(idx));
-	}	    
+        for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
+            (*a_vals).at(idx) = ((*a_vals).at(idx) - b_vals.at(idx));
+        }
     } else {
-	// TODO: exception
+        std::cout << "utils::subtract_in_place - matrices are not same dims\n";
+        std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
+        std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
     }
 }
 
-void clip(matrix &m, size_t min, size_t max) {
+void clip(matrix &m, element_type min, element_type max) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
     for (size_t idx = 0; idx < (*m_vals).size(); idx++) {
-	if ((*m_vals).at(idx) < min) {
-	    (*m_vals).at(idx) = min;
-	} else if ((*m_vals).at(idx) > max) {
-	    (*m_vals).at(idx) = max;
-	}
+        if ((*m_vals).at(idx) < min) {
+            (*m_vals).at(idx) = min;
+        } else if ((*m_vals).at(idx) > max) {
+            (*m_vals).at(idx) = max;
+        }
     }
+
 }
 /*
 // NOTE: currently unused. could be in place
@@ -292,13 +311,16 @@ void multiply(matrix &a, const matrix &b) {
 	    (*a_vals).at(idx) = (*a_vals).at(idx) * b_vals.at(idx);
 	}
     } else {
-	std::cout << "big problem";
+	std::cout << "utils::multiply - matrices are not same dims\n";
 	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
 	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
+	//print_matrix(a);
+	//print_matrix(b);
     }
 }
 
-matrix append_cols(matrix &a, const matrix &b) {
+// TODO: do this in place, avoid memory allocation
+matrix append_cols(const matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
     size_t a_n_rows = a_vals.size() / a_dim;
@@ -312,10 +334,10 @@ matrix append_cols(matrix &a, const matrix &b) {
     if (b_n_rows == a_n_rows ) {
 	for (size_t row = 0; row < a_n_rows; row++) {
 	    for (size_t a_idx = row * a_dim; a_idx < row * a_dim + a_dim; a_idx++) {
-		vals_out.push_back(a_vals.at(a_idx));
+		    vals_out.push_back(a_vals.at(a_idx));
 	    }
 	    for (size_t b_idx = row * b_dim; b_idx < row * b_dim + b_dim; b_idx++) {
-		vals_out.push_back(b_vals.at(b_idx));
+		    vals_out.push_back(b_vals.at(b_idx));
 	    }
 	}
     } else {

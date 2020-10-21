@@ -22,12 +22,13 @@ class RNN {
 	matrix prior_hs;
 
 	RNN(size_t input_dim, size_t output_dim, size_t hidden_dim) {
-	    whh = gen_random_matrix(hidden_dim, hidden_dim);
-	    wxh = gen_random_matrix(hidden_dim, input_dim);
-	    why = gen_random_matrix(output_dim, hidden_dim);
+	    whh = gen_random_matrix(hidden_dim, hidden_dim, hidden_dim);
+	    wxh = gen_random_matrix(hidden_dim, input_dim, input_dim);
+	    why = gen_random_matrix(output_dim, hidden_dim, input_dim);
 
 	    bh = gen_zeros_matrix(hidden_dim, 1);
 	    by = gen_zeros_matrix(output_dim, 1);
+
 	}
 	
 	// x is a matrix where each col is a feature and each
@@ -49,45 +50,43 @@ class RNN {
 	    prior_hs = h;
 	    //prior_hs = transpose(h);
 	    //append_rows(prior_hs, h);
-	    //std::cout<<"here0\n";
+
 	    //for (size_t col = 0; col < x_dim; col++) {
 	    std::vector<element_type> y_vals;
 
 	    for (size_t row = 0; row < x_vals.size() / x_dim; row++) {
-		// avoid memory allocation here/
-		//matrix x_col = get_col(x, col);
-		matrix x_row = get_row(x, row);	
+            // avoid memory allocation here/
+            //matrix x_col = get_col(x, col);
+            matrix x_row = get_row(x, row);
 
-		//std::cout<<"1\n";
-		//matrix sum = dot(wxh, x_col);
-		matrix sum = dot(wxh, x_row);
-		//std::cout<<"2\n";
-		matrix t_1 = dot(whh, h);
-		add_in_place(sum, t_1);
-		add_in_place(sum, h);
+            //matrix sum = dot(wxh, x_col);
+            matrix sum = dot(wxh, x_row);
 
-		tanh_e_wise(sum);
-		// h then is 64 x 1
-		h = sum;
+            matrix t_1 = dot(whh, h);
+            add_in_place(sum, t_1);
+            add_in_place(sum, h);
 
-		/// for backwards phase
-		// possibly need to figure this out, make more efficient
-		//matrix h_T = transpose(h);
-		append_cols(prior_hs, h);
-		//append_rows(prior_hs, h);
-		//std::cout<<"bottomforloopforward\n";
+            tanh_e_wise(sum);
+            // h then is 64 x 1
+            h = sum;
 
-		// that new hotness starts right here
-		matrix y = dot(why, h);
-		add_in_place(y, by);
-		// TODO: this is bad
-		y_vals.push_back(std::get<0>(y).at(0));
+            /// for backwards phase
+            // possibly need to figure this out, make more efficient
+            //matrix h_T = transpose(h);
+            prior_hs = append_cols(prior_hs, h);
+            //append_rows(prior_hs, h);
+
+            // that new hotness starts right here
+            matrix y = dot(why, h);
+            add_in_place(y, by);
+            // TODO: this is bad
+            y_vals.push_back(std::get<0>(y).at(0));
+
 	    }
 	    
 	    // for each time step/hidden state make a prediction 
 	    
 	    // note noteNOTE NOTE Oold
-	    //std::cout<<"3\n";
 	    //matrix y = dot(why, h);
 	    //add_in_place(y, by);
 	    
@@ -97,15 +96,16 @@ class RNN {
 	    return std::make_tuple(std::make_tuple(y_vals, 1), h);
 	}
 
-	// dy matrix will have dim output x n_samples
+	// dy has dim n_samples x output_dim
 	void backward(matrix &dy) {
 	    double learning_rate = 0.02;
 	    size_t n_rows = std::get<0>(prior_inputs).size() / std::get<1>(prior_inputs);
-	    
-	    //std::cout<<"0\n";
-	    matrix dwhy = dot(dy, get_row(prior_hs, n_rows));
-	    matrix dby = dy;
 
+	    //matrix dwhy = dot(dy, get_row(prior_hs, n_rows));
+	    //matrix dby = dy;
+	    
+	    matrix dby;
+	    matrix dwhy;
 	    // get shapes
 	    dim dwhh_dim = std::get<1>(whh);
 	    matrix dwhh = gen_zeros_matrix(std::get<0>(whh).size() / dwhh_dim, dwhh_dim);
@@ -115,34 +115,49 @@ class RNN {
 
 	    dim dbh_dim = std::get<1>(bh);
 	    matrix dbh = gen_zeros_matrix(std::get<0>(bh).size() / dbh_dim, dbh_dim);
-	    
-	    //std::cout<<"1\n";
-	    // THIS IS THE PROBLEM:
-	    matrix dh = dot(transpose(why), dy);
-	    std::cout << "NROWS: " << n_rows <<"\n";
+
+	    matrix dh = dot(transpose(why), get_row(dy, n_rows));
+
 	    // backpropagate	
 	    for (int idx = n_rows; idx >= 0; idx--) {
-		//std::cout<<idx<<"\t";	
-		// dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
-		matrix h_row_temp = get_col(prior_hs, n_rows);
-		//h_row_temp = transpose(h_row_temp);
-		pow_e_wise(h_row_temp, 2L);
-		// this mult then add could be condensed to 1 op, scalar - matrix
-		multiply_scalar(h_row_temp, -1);
-		add_scalar(h_row_temp, 1);
-		multiply(h_row_temp, dh);
-		
-		add_in_place(dbh, h_row_temp);
+	        //
+            dby = get_row(dy, idx);
+            matrix last_h = get_col(prior_hs, idx);
+            dwhy = dot(dby, transpose(last_h));
 
-		matrix h_row = get_row(prior_hs, n_rows);
+            // dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
 
-		add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
-		
-		add_in_place(dwxh, dot(h_row_temp, transpose(h_row)));
-		
-		//std::cout<<"2\n";
-		dh = dot(whh, h_row_temp);
+            matrix h_row_temp = get_col(prior_hs, idx);
+
+            pow_e_wise(h_row_temp, 2L);
+            // this mult then add could be condensed to 1 op, scalar - matrix
+            multiply_scalar(h_row_temp, -1);
+            add_scalar(h_row_temp, 1);
+
+            multiply(h_row_temp, dh);
+
+            add_in_place(dbh, h_row_temp);
+
+            matrix h_row = get_col(prior_hs, idx);
+
+            add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
+
+            matrix prior_input = get_row(prior_inputs, idx);
+
+            add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
+
+            dh = dot(whh, h_row_temp);
+
 	    }
+	    // avg gradient updates
+	    
+	    double n = n_rows;
+	    multiply_scalar(dwhh, (1.0 / n));
+	    multiply_scalar(dwxh, (1.0 / n));
+	    multiply_scalar(dwhy, (1.0 / n));
+	    multiply_scalar(dbh, (1.0 / n));
+	    //multiply_scalar(dby, (1.0 / n));
+
 	    // clip
 	    clip(dwxh, -1, 1);
 	    clip(dwhh, -1, 1);
@@ -150,7 +165,7 @@ class RNN {
 	    clip(dbh, -1, 1);
 	    clip(dby, -1, 1);
 	    
-	    // update weights and biases
+	    // update weights and biases, using avg of gradient updates
 	    multiply_scalar(dwhh, learning_rate);
 	    subtract_in_place(whh, dwhh);
 
@@ -165,45 +180,56 @@ class RNN {
 
 	    multiply_scalar(dby, learning_rate);
 	    subtract_in_place(by, dby);
+
 	}
 	
 	// binary cross-entropy
 	// y dim = (output_dim x 1)
 	// forward output dim = (output_dim x 1)
-	double loss(const matrix &x, const matrix &y) {
+	double loss(const matrix &x, const matrix &y, const bool flag) {
 	    //std::cout<<"forward call\n";
 	    std::tuple<matrix, matrix> result = forward(x);
 	    // predictions
 	    matrix out = std::get<0>(result);
 	    
 	    // not sure about this softmax
-	    softmax_in_place(out);
-	    
-	    //print_matrix(out);
+	    //softmax_in_place(out);
+	    sigmoid(out);
+
+	    if (flag) {
+		    std::cout<<"printing forward probs:\n";
+		    print_matrix(out);
+	    }
+
+        clip(out, 0.0001, 0.99999999);
 
 	    std::vector<element_type> y_ps = std::get<0>(out);
 	    std::vector<element_type> y_vals = std::get<0>(y);
 
 	    double loss = 0.0;
-	    
-	    //std::cout<< "this new loop\n";
-	    //std::cout << "y_vals size: " << y_vals.size() <<"\n";
-	    //std::cout << "y_ps size: " << y_ps.size() <<"\n";
+
 	    for (size_t idx = 0; idx < y_vals.size(); idx++) {
-		const double y_val = y_vals.at(idx);
-		const double y_p = y_ps.at(idx);
-		double l = y_val * log(y_p) + (1 - y_val) * log(1 - y_p);
-		loss += l;
+            const double y_val = y_vals.at(idx);
+            double y_p = y_ps.at(idx);
+            //if (y_p == 0.0 || y_p == 1.0) {
+            //    y_p += 0.000001;
+            //}
+
+            double l = y_val * log(y_p) + (1 - y_val) * log(1 - y_p);
+
+            loss += l;
+
 	    }
 
 	    return -1 * loss / y_vals.size();
 	}
 	
-	double total_loss(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
+	double total_loss(const std::vector<matrix> &X, const std::vector<matrix> &Y,
+		const bool flag) {
 	    double l = 0.0;
 
 	    for (size_t idx = 0; idx < Y.size(); idx++) {
-		l += loss(X.at(idx), Y.at(idx));
+		    l += loss(X.at(idx), Y.at(idx), flag);
 	    }
 
 	    return -1 * l / Y.size();
@@ -216,11 +242,11 @@ class RNN {
 
 	    for (size_t epoch = 0; epoch < num_epochs; epoch++) {
 		
-		std::cout << "Total loss: " << total_loss(X, Y) << "\n";	
-
+		if (epoch > 1) {	
+		    std::cout << "Total loss: " << total_loss(X, Y, false) << "\n";
+		}
 		// for each training example
 		for (size_t idx = 0; idx < Y.size(); idx++) {
-		    //std::cout << "forward call\n";
 		    std::tuple<matrix, matrix> forward_res = forward(X.at(idx));
 		    
 		    // tuple is y, h
@@ -228,14 +254,15 @@ class RNN {
 		    softmax_in_place(dldy);
 
 		    subtract_in_place(dldy, Y.at(idx));
-		    //std::cout<<"backward call \n";
-		    dldy = transpose(dldy);
+		    
+		    // for each timestep
+		    //size_t num_timesteps = std::get<0>(dldy).size();
+		    //dldy = transpose(dldy);
+		    //for 
 		    backward(dldy);
 		}
 	    }
 	}
-	//double total_loss() {
 
-	//}
 };
 
