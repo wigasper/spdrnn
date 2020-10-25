@@ -4,26 +4,35 @@
 #include <tuple>
 
 #include "utils.h"
+#include "eval.h"
 
 typedef double element_type;
 typedef std::tuple<std::vector<element_type>, size_t> matrix;
 
 class RNN {
     public:
-	matrix whh;
-	matrix wxh;
-	matrix why;
+        size_t input_dim;
+        size_t output_dim;
+        size_t hidden_dim;
 
-	matrix bh;
-	matrix by;
-	
-	matrix prior_inputs;
-	// shape
-	matrix prior_hs;
+        matrix whh;
+        matrix wxh;
+        matrix why;
 
-	int bptt_stop = 4;
+        matrix bh;
+        matrix by;
 
-	RNN(size_t input_dim, size_t output_dim, size_t hidden_dim) {
+        matrix prior_inputs;
+        matrix prior_hs;
+
+        // TODO fix this, probably should be a param input somewhere
+        int bptt_stop = 10;
+
+	RNN(size_t in_dim, size_t out_dim, size_t hid_dim) {
+	    input_dim = in_dim;
+	    output_dim = out_dim;
+	    hidden_dim = hid_dim;
+
 	    whh = gen_random_matrix(hidden_dim, hidden_dim, hidden_dim);
 	    wxh = gen_random_matrix(hidden_dim, input_dim, input_dim);
 	    why = gen_random_matrix(output_dim, hidden_dim, input_dim);
@@ -59,6 +68,7 @@ class RNN {
             // avoid memory allocation here/
             //matrix x_col = get_col(x, col);
             matrix x_row = get_row(x, row);
+            //x_row = transpose(x_row);
 
             //matrix sum = dot(wxh, x_col);
             matrix sum = dot(wxh, x_row);
@@ -91,9 +101,7 @@ class RNN {
 	    //matrix y = dot(why, h);
 	    //add_in_place(y, by);
 	    
-	    // TODO: can return h vals as well
-	    //
-	    //return std::make_tuple(y, h);
+	    // TODO: consider removing h here if not needed
 	    return std::make_tuple(std::make_tuple(y_vals, 1), h);
 	}
 
@@ -106,7 +114,9 @@ class RNN {
 	    //matrix dby = dy;
 	    
 	    matrix dby;
-	    matrix dwhy = gen_zeros_matrix(1, 64);
+
+	    dim dwhy_dim = std::get<1>(why);
+	    matrix dwhy = gen_zeros_matrix(std::get<0>(why).size() / dwhy_dim, dwhy_dim);
 	    // get shapes
 	    dim dwhh_dim = std::get<1>(whh);
 	    matrix dwhh = gen_zeros_matrix(std::get<0>(whh).size() / dwhh_dim, dwhh_dim);
@@ -126,7 +136,6 @@ class RNN {
 
             dby = get_row(dy, t_step);
             matrix last_h = get_col(prior_hs, t_step);
-            //dwhy = dot(dby, transpose(last_h));
             add_in_place(dwhy, dot(dby, transpose(last_h)));
 
             // dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
@@ -212,7 +221,6 @@ class RNN {
 	// y dim = (output_dim x 1)
 	// forward output dim = (output_dim x 1)
 	double loss(const matrix &x, const matrix &y) {
-	    //std::cout<<"forward call\n";
 	    std::tuple<matrix, matrix> result = forward(x);
 	    // predictions
 	    matrix out = std::get<0>(result);
@@ -231,9 +239,6 @@ class RNN {
 	    for (size_t idx = 0; idx < y_vals.size(); idx++) {
             const double y_val = y_vals.at(idx);
             double y_p = y_ps.at(idx);
-            //if (y_p == 0.0 || y_p == 1.0) {
-            //    y_p += 0.000001;
-            //}
 
             double l = y_val * log(y_p) + (1 - y_val) * log(1 - y_p);
 
@@ -255,7 +260,7 @@ class RNN {
 	}
 
 	void train(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
-	    size_t num_epochs = 100;
+	    size_t num_epochs = 10;
 	    double learning_rate = 0.0001;
 
 	    std::vector<double> losses;
@@ -283,14 +288,65 @@ class RNN {
 
                 subtract_in_place(dldy, Y.at(idx));
 
-                // for each timestep
-                //size_t num_timesteps = std::get<0>(dldy).size();
-                //dldy = transpose(dldy);
-                //for
                 backward(dldy, learning_rate);
             }
 	    }
+
+	    save_weights();
 	}
 
-};
+	void test(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
+        size_t true_pos = 0;
+        size_t true_neg = 0;
+        size_t false_pos = 0;
+        size_t false_neg = 0;
 
+        double threshold = 0.5;
+
+	    // for each training example
+        for (size_t idx = 0; idx < Y.size(); idx++) {
+            std::tuple<matrix, matrix> forward_res = forward(X.at(idx));
+
+            // tuple is y, h
+            matrix y_hat = std::get<0>(forward_res);
+            sigmoid(y_hat);
+
+            round(y_hat, threshold);
+            matrix y = Y.at(idx);
+
+            outcomes counts = count_outcomes(y, y_hat);
+
+            true_pos += std::get<0>(counts);
+            true_neg += std::get<1>(counts);
+            false_pos += std::get<2>(counts);
+            false_neg += std::get<3>(counts);
+        }
+
+        // TODO maybe this tuple is unnecessary
+        metrics test_metrics = get_metrics(std::make_tuple(true_pos, true_neg, false_pos,
+                                                           false_neg));
+
+        std::cout << "Accuracy: " << std::get<0>(test_metrics) << "\n";
+        std::cout << "Precision: " << std::get<1>(test_metrics) << "\n";
+        std::cout << "Recall: " << std::get<2>(test_metrics) << "\n";
+        std::cout << "F1: " << std::get<3>(test_metrics) << "\n";
+	}
+
+	void save_weights() {
+	    fs::create_directory("weights");
+        write(whh, "weights/whh");
+        write(wxh, "weights/wxh");
+        write(why, "weights/why");
+        write(bh, "weights/bh");
+        write(by, "weights/by");
+	}
+
+	void load_weights(std::string dir_path) {
+        whh = load_weights_matrix("whh", hidden_dim, hidden_dim);
+        wxh = load_weights_matrix("wxh", hidden_dim, input_dim);
+        why = load_weights_matrix("why", output_dim, hidden_dim);
+        bh = load_weights_matrix("bh", hidden_dim, 1);
+        by = load_weights_matrix("by", output_dim, 1);
+
+	}
+};

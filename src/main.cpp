@@ -6,15 +6,22 @@ int main(int argc, char **argv) {
     //test_routine();
 
     std::cout << "model init\n";
-    RNN model = RNN(1, 1, 64);
+    RNN model = RNN(3, 1, 64);
 
     std::cout<<"loading\n";
     std::tuple<std::vector<matrix>, std::vector<matrix>> load_result =
-	load_from_dir("mock_data/train");
+	    load_from_dir("data/train");
 
     std::vector<matrix> X = std::get<0>(load_result);
     std::vector<matrix> Y = std::get<1>(load_result);
     
     std::cout<<"training\n";
     model.train(X, Y);
+
+    std::cout<<"loading test data\n";
+
+    load_result = load_from_dir("data/test");
+    X = std::get<0>(load_result);
+    Y = std::get<1>(load_result);
+    model.test(X, Y);
 }
