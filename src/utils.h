@@ -67,7 +67,7 @@ matrix dot(const matrix &a, const matrix &b) {
 
     dim b_dim = std::get<1>(b);
     std::vector<element_type> b_vals = std::get<0>(b);
-     
+    dim b_n_rows = b_vals.size() / b_dim;
     // num cols & rows in output matrix
     // n_rows from a x n_cols from b
     size_t n_cols = b_dim;
@@ -77,11 +77,16 @@ matrix dot(const matrix &a, const matrix &b) {
     vals_out.reserve(n_cols * n_rows);
     
     // check to make sure conformable, a_cols = b_rows
-    if (a_dim != std::get<0>(b).size() / b_dim) {
+    if (a_dim != b_n_rows) {
+        size_t a_0 = a_vals.size() / a_dim;
+        size_t a_1 = a_dim;
+        size_t b_0 = b_vals.size() / b_dim;
+        size_t b_1 = b_dim;
         // this is fairly improper
         std::cout << "utils::dot - matrices are not comformable\n";
-        std::cout << "matrix a: " << a_vals.size() / a_dim << " x " << a_dim <<"\n";
-        std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
+        std::cout << "matrix a: " << a_0 << " x " << a_1 <<"\n";
+        std::cout << "matrix b: " << b_0 << " x " << b_1 <<"\n";
+
     } else {
         // is there a faster way to do this??
         for (size_t row = 0; row < n_rows; row++) {

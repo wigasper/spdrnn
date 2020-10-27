@@ -66,11 +66,9 @@ class RNN {
 
 	    for (size_t row = 0; row < x_vals.size() / x_dim; row++) {
             // avoid memory allocation here/
-            //matrix x_col = get_col(x, col);
             matrix x_row = get_row(x, row);
-            //x_row = transpose(x_row);
+            x_row = transpose(x_row);
 
-            //matrix sum = dot(wxh, x_col);
             matrix sum = dot(wxh, x_row);
 
             matrix t_1 = dot(whh, h);
@@ -130,7 +128,7 @@ class RNN {
 	    //matrix dh = dot(transpose(why), get_row(dy, n_rows));
 
 	    // backpropagate	
-	    for (int t_step = n_rows; t_step >= 0; t_step--) {
+	    for (int t_step = n_rows - 1; t_step >= 0; t_step--) {
 	        //
             matrix dh = dot(transpose(why), get_row(dy, t_step));
 
@@ -149,6 +147,9 @@ class RNN {
             matrix h_row = get_col(prior_hs, t_step);
             add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
             matrix prior_input = get_row(prior_inputs, t_step);
+            // TODO: new, resolved error, but bad, fix this
+            prior_input = transpose(prior_input);
+
             add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
             dh = dot(whh, h_row_temp);
 
@@ -175,6 +176,10 @@ class RNN {
                 matrix h_row = get_col(prior_hs, idx);
                 add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
                 matrix prior_input = get_row(prior_inputs, idx);
+
+                //newnew
+                prior_input = transpose(prior_input);
+
                 add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
                 dh = dot(whh, h_row_temp);
 
@@ -260,7 +265,7 @@ class RNN {
 	}
 
 	void train(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
-	    size_t num_epochs = 10;
+	    size_t num_epochs = 30;
 	    double learning_rate = 0.0001;
 
 	    std::vector<double> losses;
