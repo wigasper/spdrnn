@@ -1,32 +1,36 @@
-#include <vector>
-#include <iostream>
-#include <stdlib.h>
-#include <tuple>
-#include <math.h>
-#include <string>
-#include <regex>
-#include <random>
-#include <fstream>
+#include <algorithm>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <math.h>
+#include <random>
+#include <regex>
+#include <stdlib.h>
+#include <string>
+#include <tuple>
+#include <vector>
 namespace fs = std::filesystem;
 
 typedef double element_type;
 typedef size_t dim;
 typedef std::tuple<std::vector<element_type>, dim> matrix;
 
+std::random_device RANDOM_DEVICE;
+std::mt19937 generator(RANDOM_DEVICE());
+
 void print_matrix(const matrix &m) {
     std::vector<element_type> vals = std::get<0>(m);
     dim dimension = std::get<1>(m);
-    
+
     size_t idx = 0;
 
     for (element_type val : vals) {
-	    std::cout << val << " ";
-	    idx++;
+	std::cout << val << " ";
+	idx++;
 
-	    if (idx % dimension == 0) {
-	        std::cout << "\n";
-	    }
+	if (idx % dimension == 0) {
+	    std::cout << "\n";
+	}
     }
     std::cout << "\n";
 }
@@ -37,12 +41,12 @@ matrix gen_random_matrix(size_t m, size_t n, size_t prior_layer_dim) {
     element_type min = -1 * (1 / sqrt(prior_layer_dim));
     element_type max = 1 / sqrt(prior_layer_dim);
 
-    std::random_device device;
-    std::mt19937 generator(device());
+    // std::random_device device;
+    // std::mt19937 generator(device());
     std::uniform_real_distribution<element_type> distribution(min, max);
 
     for (size_t _idx = 0; _idx < (m * n); _idx++) {
-	    vals_out.push_back(distribution(generator));
+	vals_out.push_back(distribution(generator));
     }
 
     return std::make_tuple(vals_out, n);
@@ -59,8 +63,8 @@ matrix gen_zeros_matrix(size_t m, size_t n) {
 }
 
 matrix dot(const matrix &a, const matrix &b) {
-    //print_matrix(a);
-    //print_matrix(b);
+    // print_matrix(a);
+    // print_matrix(b);
 
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
@@ -72,40 +76,40 @@ matrix dot(const matrix &a, const matrix &b) {
     // n_rows from a x n_cols from b
     size_t n_cols = b_dim;
     size_t n_rows = std::get<0>(a).size() / a_dim;
-    
+
     std::vector<element_type> vals_out;
     vals_out.reserve(n_cols * n_rows);
-    
+
     // check to make sure conformable, a_cols = b_rows
     if (a_dim != b_n_rows) {
-        size_t a_0 = a_vals.size() / a_dim;
-        size_t a_1 = a_dim;
-        size_t b_0 = b_vals.size() / b_dim;
-        size_t b_1 = b_dim;
-        // this is fairly improper
-        std::cout << "utils::dot - matrices are not comformable\n";
-        std::cout << "matrix a: " << a_0 << " x " << a_1 <<"\n";
-        std::cout << "matrix b: " << b_0 << " x " << b_1 <<"\n";
+	size_t a_0 = a_vals.size() / a_dim;
+	size_t a_1 = a_dim;
+	size_t b_0 = b_vals.size() / b_dim;
+	size_t b_1 = b_dim;
+	// this is fairly improper
+	std::cout << "utils::dot - matrices are not comformable\n";
+	std::cout << "matrix a: " << a_0 << " x " << a_1 << "\n";
+	std::cout << "matrix b: " << b_0 << " x " << b_1 << "\n";
 
     } else {
-        // is there a faster way to do this??
-        for (size_t row = 0; row < n_rows; row++) {
-            for (size_t col = 0; col < n_cols; col++) {
-                element_type sum = 0;
-                // keep track of a and b important indices
-                size_t a_begin = row * a_dim;
-                size_t a_end = (row * a_dim) + a_dim;
+	// is there a faster way to do this??
+	for (size_t row = 0; row < n_rows; row++) {
+	    for (size_t col = 0; col < n_cols; col++) {
+		element_type sum = 0;
+		// keep track of a and b important indices
+		size_t a_begin = row * a_dim;
+		size_t a_end = (row * a_dim) + a_dim;
 
-                size_t b_idx = col;
+		size_t b_idx = col;
 
-                for (size_t a_idx = a_begin; a_idx < a_end; a_idx++) {
-                    sum += (a_vals.at(a_idx) * b_vals.at(b_idx));
-                    b_idx += b_dim;
-                }
+		for (size_t a_idx = a_begin; a_idx < a_end; a_idx++) {
+		    sum += (a_vals.at(a_idx) * b_vals.at(b_idx));
+		    b_idx += b_dim;
+		}
 
-                vals_out.push_back(sum);
-            }
-        }
+		vals_out.push_back(sum);
+	    }
+	}
     }
     return std::make_tuple(vals_out, n_cols);
 }
@@ -118,6 +122,7 @@ void tanh_e_wise(matrix &a) {
 	(*a_vals).at(idx) = tanh((*a_vals).at(idx));
     }
 }
+
 matrix transpose(matrix &m) {
     std::vector<element_type> m_vals = std::get<0>(m);
     dim m_dim = std::get<1>(m);
@@ -158,11 +163,11 @@ matrix get_col(const matrix &m, const size_t &j) {
 
     dim m_dim = std::get<1>(m);
     std::vector<element_type> m_vals = std::get<0>(m);
-    
+
     size_t n_rows = m_vals.size() / m_dim;
 
     for (size_t row = 0; row < n_rows; row++) {
-	    vals_out.push_back(m_vals.at(row * m_dim + j));
+	vals_out.push_back(m_vals.at(row * m_dim + j));
     }
 
     return std::make_tuple(vals_out, 1);
@@ -172,7 +177,7 @@ void sigmoid(matrix &a) {
     std::vector<element_type> *a_vals = &std::get<0>(a);
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-        (*a_vals).at(idx) = 1 / (1 + exp(-1 * ((*a_vals).at(idx))));
+	(*a_vals).at(idx) = 1 / (1 + exp(-1 * ((*a_vals).at(idx))));
     }
 }
 
@@ -180,19 +185,18 @@ void softmax_in_place(matrix &a) {
     std::vector<element_type> *a_vals = &std::get<0>(a);
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	    (*a_vals).at(idx) = exp((*a_vals).at(idx));
+	(*a_vals).at(idx) = exp((*a_vals).at(idx));
     }
 
     double sum = 0.0;
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	    sum += (*a_vals).at(idx);
+	sum += (*a_vals).at(idx);
     }
 
     for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	    (*a_vals).at(idx) = (*a_vals).at(idx) / sum;
+	(*a_vals).at(idx) = (*a_vals).at(idx) / sum;
     }
-
 }
 
 void add_in_place(matrix &a, const matrix &b) {
@@ -202,16 +206,16 @@ void add_in_place(matrix &a, const matrix &b) {
 
     dim b_dim = std::get<1>(b);
     std::vector<element_type> b_vals = std::get<0>(b);
-    size_t b_n_rows = std::get<0>(b).size() / b_dim; 
-    
+    size_t b_n_rows = std::get<0>(b).size() / b_dim;
+
     if (*a_dim == b_dim && a_n_rows == b_n_rows) {
-        for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-            (*a_vals).at(idx) = ((*a_vals).at(idx) + b_vals.at(idx));
-        }
+	for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
+	    (*a_vals).at(idx) = ((*a_vals).at(idx) + b_vals.at(idx));
+	}
     } else {
-        std::cout << "utils::add_in_place - matrices are not same dims\n";
-        std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
-        std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
+	std::cout << "utils::add_in_place - matrices are not same dims\n";
+	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim << "\n";
+	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim << "\n";
     }
 }
 
@@ -222,16 +226,16 @@ void subtract_in_place(matrix &a, const matrix &b) {
 
     dim b_dim = std::get<1>(b);
     std::vector<element_type> b_vals = std::get<0>(b);
-    size_t b_n_rows = std::get<0>(b).size() / b_dim; 
-    
+    size_t b_n_rows = std::get<0>(b).size() / b_dim;
+
     if (*a_dim == b_dim && a_n_rows == b_n_rows) {
-        for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-            (*a_vals).at(idx) = ((*a_vals).at(idx) - b_vals.at(idx));
-        }
+	for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
+	    (*a_vals).at(idx) = ((*a_vals).at(idx) - b_vals.at(idx));
+	}
     } else {
-        std::cout << "utils::subtract_in_place - matrices are not same dims\n";
-        std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
-        std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
+	std::cout << "utils::subtract_in_place - matrices are not same dims\n";
+	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim << "\n";
+	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim << "\n";
     }
 }
 
@@ -239,42 +243,13 @@ void clip(matrix &m, element_type min, element_type max) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
     for (size_t idx = 0; idx < (*m_vals).size(); idx++) {
-        if ((*m_vals).at(idx) < min) {
-            (*m_vals).at(idx) = min;
-        } else if ((*m_vals).at(idx) > max) {
-            (*m_vals).at(idx) = max;
-        }
+	if ((*m_vals).at(idx) < min) {
+	    (*m_vals).at(idx) = min;
+	} else if ((*m_vals).at(idx) > max) {
+	    (*m_vals).at(idx) = max;
+	}
     }
-
 }
-/*
-// NOTE: currently unused. could be in place
-matrix subtract(const matrix &a, const matrix &b) {
-    dim a_dim = std::get<1>(a);
-    std::vector<element_type> a_vals = std::get<0>(a);
-    size_t a_n_rows = std::get<0>(a).size() / a_dim;
-
-    dim b_dim = std::get<1>(b);
-    std::vector<element_type> b_vals = std::get<0>(b);
-    size_t b_n_rows = std::get<0>(b).size() / b_dim; 
-    
-    std::vector<element_type> vals_out;
-    vals_out.reserve(b_dim * b_n_rows);
-
-    if (a_dim == b_dim && a_n_rows == b_n_rows) {
-	for (size_t idx = 0; idx < a_vals.size(); idx++) {
-	    vals_out.push_back(a_vals[idx] - b_vals[idx]);
-	}	    
-    } else {
-	// TODO: exception
-    }
-
-    // num cols & rows in output matrix
-    size_t n_cols = b_dim;
-    size_t n_rows = std::get<0>(a).size() / a_dim;
-    
-    return std::make_tuple(vals_out, a_dim); 
-}*/
 
 void pow_e_wise(matrix &m, const double power) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
@@ -300,7 +275,6 @@ void multiply_scalar(matrix &m, const double scalar) {
     }
 }
 
-
 // element-wise multiplication applied to the first
 void multiply(matrix &a, const matrix &b) {
     dim *a_dim = &std::get<1>(a);
@@ -310,17 +284,17 @@ void multiply(matrix &a, const matrix &b) {
     dim b_dim = std::get<1>(b);
     std::vector<element_type> b_vals = std::get<0>(b);
     size_t b_n_rows = b_vals.size() / b_dim;
-    
+
     if (a_n_rows == b_n_rows && *a_dim == b_dim) {
 	for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
 	    (*a_vals).at(idx) = (*a_vals).at(idx) * b_vals.at(idx);
 	}
     } else {
 	std::cout << "utils::multiply - matrices are not same dims\n";
-	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim <<"\n";
-	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim <<"\n";
-	//print_matrix(a);
-	//print_matrix(b);
+	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim << "\n";
+	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim << "\n";
+	// print_matrix(a);
+	// print_matrix(b);
     }
 }
 
@@ -333,20 +307,20 @@ matrix append_cols(const matrix &a, const matrix &b) {
     dim b_dim = std::get<1>(b);
     std::vector<element_type> b_vals = std::get<0>(b);
     size_t b_n_rows = b_vals.size() / b_dim;
-    
+
     std::vector<element_type> vals_out;
-    
-    if (b_n_rows == a_n_rows ) {
-        for (size_t row = 0; row < a_n_rows; row++) {
-            for (size_t a_idx = row * a_dim; a_idx < row * a_dim + a_dim; a_idx++) {
-                vals_out.push_back(a_vals.at(a_idx));
-            }
-            for (size_t b_idx = row * b_dim; b_idx < row * b_dim + b_dim; b_idx++) {
-                vals_out.push_back(b_vals.at(b_idx));
-            }
-        }
+
+    if (b_n_rows == a_n_rows) {
+	for (size_t row = 0; row < a_n_rows; row++) {
+	    for (size_t a_idx = row * a_dim; a_idx < row * a_dim + a_dim; a_idx++) {
+		vals_out.push_back(a_vals.at(a_idx));
+	    }
+	    for (size_t b_idx = row * b_dim; b_idx < row * b_dim + b_dim; b_idx++) {
+		vals_out.push_back(b_vals.at(b_idx));
+	    }
+	}
     } else {
-	    std::cout << "utils::append_cols - a_n_rows != b_n_rows !!!\n";
+	std::cout << "utils::append_cols - a_n_rows != b_n_rows !!!\n";
     }
 
     return std::make_tuple(vals_out, a_dim + b_dim);
@@ -361,13 +335,12 @@ matrix append_cols(const matrix &a, const matrix &b) {
 
 	    auto iter_begin = (*a_vals).begin() + idx;
 	    auto iter_end = (*a_vals).begin() + idx + b_dim;
-	    for (auto 
+	    for (auto
 	}
 
     } else {
 	std::cout<< "utils::append_cols - a_n_rows!=b_n_rows!!!!!\n";
     }*/
-
 }
 
 // used to append rows
@@ -379,11 +352,11 @@ void append_rows(matrix &a, const matrix &b) {
     std::vector<element_type> b_vals = std::get<0>(b);
 
     if (a_dim == b_dim) {
-        for (element_type val : b_vals) {
-            (*a_vals).push_back(val);
-        }
+	for (element_type val : b_vals) {
+	    (*a_vals).push_back(val);
+	}
     } else {
-	    std::cout << "utils::append_matrix - a_dim != b_dim!!!!";
+	std::cout << "utils::append_matrix - a_dim != b_dim!!!!";
     }
 }
 
@@ -391,24 +364,24 @@ void round(matrix &m, const double &threshold) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
     for (size_t idx = 0; idx < (*m_vals).size(); idx++) {
-        if ((*m_vals).at(idx) < threshold) {
-            (*m_vals).at(idx) = 0.0;
-        } else {
-            (*m_vals).at(idx) = 1.0;
-        }
+	if ((*m_vals).at(idx) < threshold) {
+	    (*m_vals).at(idx) = 0.0;
+	} else {
+	    (*m_vals).at(idx) = 1.0;
+	}
     }
 }
 
 std::string trim_whitespace(std::string a_string) {
     size_t first = a_string.find_first_not_of(' ');
     if (first == std::string::npos) {
-        return "";
+	return "";
     }
     size_t last = a_string.find_last_not_of(' ');
     return a_string.substr(first, (last - first + 1));
 }
 
-// parses a single line of a whitespace delimited input
+// parses a single line of a comma delimited input
 // file
 std::vector<std::string> parse_line(std::string line) {
     std::vector<std::string> vec_out;
@@ -416,38 +389,37 @@ std::vector<std::string> parse_line(std::string line) {
 
     std::regex delim_regex(",");
     line = std::regex_replace(line, delim_regex, delim);
-    
+
     size_t index = 0;
-    
+
     std::string element;
     std::string trimmed_element;
 
     while ((index = line.find(delim)) != std::string::npos) {
-        element = line.substr(0, index);
-        
-        trimmed_element = trim_whitespace(element);
-        if (!trimmed_element.empty()) {
-            vec_out.push_back(trim_whitespace(element));
-        }
+	element = line.substr(0, index);
 
-        line.erase(0, index + delim.length());
+	trimmed_element = trim_whitespace(element);
+	if (!trimmed_element.empty()) {
+	    vec_out.push_back(trim_whitespace(element));
+	}
+
+	line.erase(0, index + delim.length());
     }
-    
+
     trimmed_element = trim_whitespace(line);
     if (!trimmed_element.empty()) {
-        vec_out.push_back(line);
+	vec_out.push_back(line);
     }
 
     return vec_out;
 }
-
 
 // loads in the matrix from a string representing a file path
 // TODO: currently only setup for mock data
 std::tuple<matrix, matrix> load_sample(const std::string file_path) {
     bool dimension_known = false;
     dim dimension;
-    //std::cout<<file_path<<"\n";
+    // std::cout<<file_path<<"\n";
     std::vector<element_type> x_vals;
     std::vector<element_type> y_vals;
 
@@ -458,49 +430,50 @@ std::tuple<matrix, matrix> load_sample(const std::string file_path) {
     std::string line;
 
     while (getline(file_in, line)) {
-        std::vector<std::string> elements = parse_line(line);
-        
-        if (!dimension_known) {
-            dimension = elements.size();
-            dimension_known = true;
-        } else {
-            if (elements.size() != dimension) {
-                // TODO: make this fail the program
-                printf("Not every row has same dimension as first row\n");
-            }
-        }
-	
+	std::vector<std::string> elements = parse_line(line);
+
+	if (!dimension_known) {
+	    dimension = elements.size();
+	    dimension_known = true;
+	} else {
+	    if (elements.size() != dimension) {
+		// TODO: make this fail the program
+		printf("Not every row has same dimension as first row\n");
+	    }
+	}
+
 	// TODO: this should be more intelligent
 	x_vals.push_back(std::stod(elements.at(1)));
 	x_vals.push_back(std::stod(elements.at(2)));
 	x_vals.push_back(std::stod(elements.at(3)));
 	y_vals.push_back(std::stod(elements.at(4)));
-        //if (elements.size() == 2) {
-            //std::cout << std::stod(elements.at(0))
-        //    x_vals.push_back(std::stod(elements.at(0)));
-        //    y_vals.push_back(std::stod(elements.at(1)));
-        //}
+	// if (elements.size() == 2) {
+	// std::cout << std::stod(elements.at(0))
+	//    x_vals.push_back(std::stod(elements.at(0)));
+	//    y_vals.push_back(std::stod(elements.at(1)));
+	//}
     }
 
     matrix x = std::make_tuple(x_vals, 3);
     matrix y = std::make_tuple(y_vals, 1);
-    
-    //print_matrix(x);
-    //print_matrix(y);
+
+    file_in.close();
+    // print_matrix(x);
+    // print_matrix(y);
     return std::make_tuple(x, y);
 }
 
 std::tuple<std::vector<matrix>, std::vector<matrix>> load_from_dir(const std::string dir_path) {
     std::vector<matrix> X;
     std::vector<matrix> Y;
-    
+
     std::cout << "starting load loop\n";
     for (const auto &entry : fs::directory_iterator(dir_path)) {
-        std::tuple<matrix, matrix> matrices = load_sample(entry.path().string());
-        X.push_back(std::get<0>(matrices));
-        Y.push_back(std::get<1>(matrices));
+	std::tuple<matrix, matrix> matrices = load_sample(entry.path().string());
+	X.push_back(std::get<0>(matrices));
+	Y.push_back(std::get<1>(matrices));
     }
-    
+
     return std::make_tuple(X, Y);
 }
 
@@ -514,20 +487,19 @@ void write(const matrix &m, const std::string file_path) {
     size_t idx = 0;
 
     for (element_type val : m_vals) {
-        file_out << val << ",";
-        idx++;
+	file_out << val << ",";
+	idx++;
 
-        if (idx % m_dim == 0) {
-            file_out << "\n";
-        }
+	if (idx % m_dim == 0) {
+	    file_out << "\n";
+	}
     }
     file_out << "\n";
 
     file_out.close();
 }
 
-matrix load_weights_matrix(const std::string file_path, const dim m_dim,
-                           const dim n_dim) {
+matrix load_weights_matrix(const std::string file_path, const dim m_dim, const dim n_dim) {
     std::vector<element_type> m_vals;
     size_t n_rows;
 
@@ -537,25 +509,29 @@ matrix load_weights_matrix(const std::string file_path, const dim m_dim,
     std::string line;
 
     while (getline(file_in, line)) {
-        std::vector<std::string> elements = parse_line(line);
+	std::vector<std::string> elements = parse_line(line);
 
-        if (elements.size() != n_dim) {
-            // TODO: make this fail the program
-            printf("utils::load_weights_matrix - bad dimension\n");
-        }
+	if (elements.size() != n_dim) {
+	    // TODO: make this fail the program
+	    printf("utils::load_weights_matrix - bad dimension\n");
+	}
 
-        for (std::string element : elements) {
-            m_vals.push_back(std::stod(element));
-        }
+	for (std::string element : elements) {
+	    m_vals.push_back(std::stod(element));
+	}
 
-        n_rows++;
+	n_rows++;
     }
 
     if (n_rows != m_dim) {
-        // TODO make this fail teh program
-        std::cout << "utils::load_weights_matrix - bad n dim\n";
+	// TODO make this fail teh program
+	std::cout << "utils::load_weights_matrix - bad n dim\n";
     }
     matrix m = std::make_tuple(m_vals, n_dim);
 
     return m;
+}
+
+void shuffle(std::vector<matrix> matrices) {
+    std::shuffle(matrices.begin(), matrices.end(), generator);
 }
