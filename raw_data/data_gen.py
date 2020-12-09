@@ -1,8 +1,10 @@
 import re
+import os
+from pathlib import Path
 from random import randint
 
-NUM_SAMPS_PER_SEC = 10
-NUM_OBS_PER_SAMP = 300
+NUM_SAMPS_PER_SEC = 8
+NUM_OBS_PER_SAMP = 400
 
 def in_trigger_interval(time, trigger_intervals):
     for trigger_int in trigger_intervals:
@@ -58,10 +60,18 @@ def load_data(file_path, start_time, stop_time):
     
     return data    
 
-if __name__ == "__main__":
+def get_dir_list(directory):
+    absolute_path = Path(directory).resolve()
+    files = os.listdir(directory)
+    absolute_fps = [os.path.join(absolute_path, f) for f in files]
+
+    return [fp for fp in absolute_fps if os.path.isdir(fp)]
+
+def process_dir(dir_path):
+    uid = dir_path.split("/")[-1]
     trigger_intervals = []
 
-    with open("VP05/Triggers.txt", "r") as handle:
+    with open(f"{dir_path}/Triggers.txt", "r") as handle:
         for line in handle:
             if re.search("^CLIP-\d.*", line):
                 line = line.split()
@@ -76,9 +86,9 @@ if __name__ == "__main__":
     start_time = min(temp_trigger_times)
     stop_time = max(temp_trigger_times)
 
-    resp_data = load_data("VP05/BitalinoBR.txt", start_time, stop_time)
-    ecg_data = load_data("VP05/BitalinoECG.txt", start_time, stop_time)
-    skin_data = load_data("VP05/BitalinoGSR.txt", start_time, stop_time)
+    resp_data = load_data(f"{dir_path}/BitalinoBR.txt", start_time, stop_time)
+    ecg_data = load_data(f"{dir_path}/BitalinoECG.txt", start_time, stop_time)
+    skin_data = load_data(f"{dir_path}/BitalinoGSR.txt", start_time, stop_time)
    
     resp_norm = min_max_normalize(resp_data)
     ecg_norm = min_max_normalize(ecg_data)
@@ -95,7 +105,7 @@ if __name__ == "__main__":
             start_idx = randint(partition, len(resp_norm) - NUM_OBS_PER_SAMP)
 
         end_idx = start_idx + NUM_OBS_PER_SAMP
-        with open(f"../data/test/{idx}", "w") as out:
+        with open(f"../data/test/{uid}_{idx}", "w") as out:
             for i in range(start_idx, end_idx):
                 response = 0
                 if in_trigger_interval(float(resp_norm[i][0]), trigger_intervals):
@@ -106,7 +116,7 @@ if __name__ == "__main__":
                 #ecg_norm.pop(i)
                 #skin_norm.pop(i)
        
-    n_training_samples = int(3 * partition / NUM_OBS_PER_SAMP)
+    n_training_samples = int(5 * partition / NUM_OBS_PER_SAMP)
 
     for idx in range(n_training_samples):
         start_idx = randint(0, partition - NUM_OBS_PER_SAMP)
@@ -115,7 +125,7 @@ if __name__ == "__main__":
             start_idx = randint(0, partition - NUM_OBS_PER_SAMP)
 
         end_idx = start_idx + NUM_OBS_PER_SAMP
-        with open(f"../data/train/{idx}", "w") as out:
+        with open(f"../data/train/{uid}_{idx}", "w") as out:
             for i in range(start_idx, end_idx):
                 response = 0
                 if in_trigger_interval(float(resp_norm[i][0]), trigger_intervals):
@@ -124,6 +134,11 @@ if __name__ == "__main__":
                 out.write(f"{skin_norm[i][1]},{response}\n")
     
 
+if __name__ == "__main__":
+    dirs = get_dir_list(".")
+
+    for this_dir in dirs:
+        process_dir(this_dir)
 #    with open("all_data", "w") as out:
 #        for idx, resp_samp in enumerate(resp_norm):
 #            response = 0
