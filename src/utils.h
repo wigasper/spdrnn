@@ -441,12 +441,17 @@ std::tuple<matrix, matrix> load_sample(const std::string file_path) {
 		printf("Not every row has same dimension as first row\n");
 	    }
 	}
+	
+	for (size_t idx = 0; idx < elements.size() - 1; idx++) {
+	    x_vals.push_back(std::stod(elements.at(idx)));
+	}
 
+	y_vals.push_back(std::stod(elements.at(elements.size() - 1)));
 	// TODO: this should be more intelligent
-	x_vals.push_back(std::stod(elements.at(1)));
-	x_vals.push_back(std::stod(elements.at(2)));
-	x_vals.push_back(std::stod(elements.at(3)));
-	y_vals.push_back(std::stod(elements.at(4)));
+	//x_vals.push_back(std::stod(elements.at(1)));
+	//x_vals.push_back(std::stod(elements.at(2)));
+	//x_vals.push_back(std::stod(elements.at(3)));
+	//y_vals.push_back(std::stod(elements.at(4)));
 	// if (elements.size() == 2) {
 	// std::cout << std::stod(elements.at(0))
 	//    x_vals.push_back(std::stod(elements.at(0)));
@@ -454,7 +459,7 @@ std::tuple<matrix, matrix> load_sample(const std::string file_path) {
 	//}
     }
 
-    matrix x = std::make_tuple(x_vals, 3);
+    matrix x = std::make_tuple(x_vals, dimension - 1);
     matrix y = std::make_tuple(y_vals, 1);
 
     file_in.close();
@@ -467,7 +472,7 @@ std::tuple<std::vector<matrix>, std::vector<matrix>> load_from_dir(const std::st
     std::vector<matrix> X;
     std::vector<matrix> Y;
 
-    std::cout << "starting load loop\n";
+    //std::cout << "starting load loop\n";
     for (const auto &entry : fs::directory_iterator(dir_path)) {
 	std::tuple<matrix, matrix> matrices = load_sample(entry.path().string());
 	X.push_back(std::get<0>(matrices));

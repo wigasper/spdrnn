@@ -1,5 +1,5 @@
-#include <vector>
 #include <tuple>
+#include <vector>
 
 // true pos, true neg, false pos, false neg
 typedef std::tuple<size_t, size_t, size_t, size_t> outcomes;
@@ -20,15 +20,15 @@ outcomes count_outcomes(const matrix &y, const matrix &y_hat) {
 
     // TODO better way to do this? linear algebra?
     for (size_t idx = 0; idx < y_vals.size(); idx++) {
-        if (y_vals.at(idx) == 1 && y_hat_vals.at(idx) == 1) {
-            tp += 1;
-        } else if (y_vals.at(idx) == 1 && y_hat_vals.at(idx) == 0) {
-            fn += 1;
-        } else if (y_vals.at(idx) == 0 && y_hat_vals.at(idx) == 1) {
-            fp += 1;
-        } else {
-            tn += 1;
-        }
+	if (y_vals.at(idx) == 1 && y_hat_vals.at(idx) == 1) {
+	    tp += 1;
+	} else if (y_vals.at(idx) == 1 && y_hat_vals.at(idx) == 0) {
+	    fn += 1;
+	} else if (y_vals.at(idx) == 0 && y_hat_vals.at(idx) == 1) {
+	    fp += 1;
+	} else {
+	    tn += 1;
+	}
     }
 
     return std::make_tuple(tp, tn, fp, fn);

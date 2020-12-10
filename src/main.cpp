@@ -10,7 +10,7 @@
 // opts: prot_fp, ligand_fp, ligand_actual_fp, lj_fp, eval_bool, test_bool, 
 // help_bool, num_samples
 typedef std::tuple<std::string, std::string, std::string, 
-	std::string, std::string> opts;
+	std::string, std::string, std::string, std::string> opts;
 
 // prints the help message
 void print_help() {
@@ -41,6 +41,8 @@ opts get_opts(int argc, char **argv) {
     std::string input_dim;
     std::string output_dim;
     std::string hidden_dim;
+    std::string epochs = "30";
+    std::string learning_rate = "0.0001";
 
     int c;
     
@@ -51,11 +53,13 @@ opts get_opts(int argc, char **argv) {
 	    {"input-dim", required_argument, 0, 'i'},
 	    {"output-dim", required_argument, 0, 'o'},
 	    {"hidden-dim", required_argument, 0, 'h'},
+	    {"epochs", required_argument, 0, 'e'},
+	    {"learning_rate", required_argument, 0, 'l'},
 	    {0, 0, 0, 0}
 	};
 
 	int opt_idx = 0;
-	c = getopt_long(argc, argv, "t:s:i:o:h:", long_options, &opt_idx);
+	c = getopt_long(argc, argv, "t:s:i:o:h:e:l:", long_options, &opt_idx);
 
 	if (c == -1) {
 	    break;
@@ -77,13 +81,30 @@ opts get_opts(int argc, char **argv) {
 	    case 'h':
 		hidden_dim = optarg;
 		break;
+	    case 'e':
+		epochs = optarg;
+		break;
+	    case 'l':
+		learning_rate = optarg;
+		break;
 	    default:
 		printf("This is a naive arg parser and is not tolerant\n");
 		printf("of any uncertainty\n");
 		print_help();
 	}
     }
-    return std::make_tuple(train_dir, test_dir, input_dim, output_dim, hidden_dim);	
+    return std::make_tuple(train_dir, test_dir, input_dim, output_dim, 
+	    hidden_dim, epochs, learning_rate);	
+}
+
+void print_opts(opts &options) {
+    std::cout << "Train data dir.: " << std::get<0>(options) << "\n";
+    std::cout << "Test data dir.: " << std::get<1>(options) << "\n";
+    std::cout << "Input layer dim.: " << std::get<2>(options) << "\n";
+    std::cout << "Output layer dim.: " << std::get<3>(options) << "\n";
+    std::cout << "Hidden layer dim.: " << std::get<4>(options) << "\n";
+    std::cout << "Num. epochs: " << std::get<5>(options) << "\n";
+    std::cout << "Learning rate: " << std::get<6>(options) << "\n";
 }
 
 int main(int argc, char **argv) {
@@ -94,9 +115,11 @@ int main(int argc, char **argv) {
     size_t input_dim = std::stoul(std::get<2>(options));
     size_t output_dim = std::stoul(std::get<3>(options));
     size_t hidden_dim = std::stoul(std::get<4>(options));
+    size_t epochs = std::stoul(std::get<5>(options));
+    double learning_rate = std::stod(std::get<6>(options));
 
+    print_opts(options);
 
-    std::cout << "Model initialization\n";
     RNN model = RNN(input_dim, output_dim, hidden_dim);
 
     std::cout << "Loading training data\n";
@@ -106,7 +129,7 @@ int main(int argc, char **argv) {
     std::vector<matrix> Y = std::get<1>(load_result);
 
     std::cout << "Training\n";
-    model.train(X, Y);
+    model.train(X, Y, epochs, learning_rate);
 
     std::cout << "Loading test data\n";
 
