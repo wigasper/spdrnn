@@ -2,15 +2,16 @@
 #include "rnn.h"
 #include "test.h"
 
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 
 // an 'opts' tuple to make the function get_opts more readable
-// opts: prot_fp, ligand_fp, ligand_actual_fp, lj_fp, eval_bool, test_bool, 
+// opts: prot_fp, ligand_fp, ligand_actual_fp, lj_fp, eval_bool, test_bool,
 // help_bool, num_samples
-typedef std::tuple<std::string, std::string, std::string, 
-	std::string, std::string, std::string, std::string> opts;
+typedef std::tuple<std::string, std::string, std::string, std::string, std::string, std::string,
+		   std::string>
+    opts;
 
 // prints the help message
 void print_help() {
@@ -31,7 +32,7 @@ void print_help() {
 }
 
 // parses options with GNU getopt and returns them in a tuple
-// used template from 
+// used template from
 // https://www.gnu.org/software/libc/manual/html_node/Example-of-Getopt.html
 // and
 // https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html
@@ -45,18 +46,13 @@ opts get_opts(int argc, char **argv) {
     std::string learning_rate = "0.0001";
 
     int c;
-    
+
     while (1) {
 	static struct option long_options[] = {
-	    {"train-dir", required_argument, 0, 't'},
-	    {"test-dir", required_argument, 0, 's'},
-	    {"input-dim", required_argument, 0, 'i'},
-	    {"output-dim", required_argument, 0, 'o'},
-	    {"hidden-dim", required_argument, 0, 'h'},
-	    {"epochs", required_argument, 0, 'e'},
-	    {"learning_rate", required_argument, 0, 'l'},
-	    {0, 0, 0, 0}
-	};
+	    {"train-dir", required_argument, 0, 't'},	  {"test-dir", required_argument, 0, 's'},
+	    {"input-dim", required_argument, 0, 'i'},	  {"output-dim", required_argument, 0, 'o'},
+	    {"hidden-dim", required_argument, 0, 'h'},	  {"epochs", required_argument, 0, 'e'},
+	    {"learning_rate", required_argument, 0, 'l'}, {0, 0, 0, 0}};
 
 	int opt_idx = 0;
 	c = getopt_long(argc, argv, "t:s:i:o:h:e:l:", long_options, &opt_idx);
@@ -66,35 +62,35 @@ opts get_opts(int argc, char **argv) {
 	}
 
 	switch (c) {
-	    case 't':
-		train_dir = optarg;
-		break;
-	    case 's':
-		test_dir = optarg;
-		break;
-	    case 'i':
-		input_dim = optarg;
-		break;
-	    case 'o':
-		output_dim = optarg;
-		break;
-	    case 'h':
-		hidden_dim = optarg;
-		break;
-	    case 'e':
-		epochs = optarg;
-		break;
-	    case 'l':
-		learning_rate = optarg;
-		break;
-	    default:
-		printf("This is a naive arg parser and is not tolerant\n");
-		printf("of any uncertainty\n");
-		print_help();
+	case 't':
+	    train_dir = optarg;
+	    break;
+	case 's':
+	    test_dir = optarg;
+	    break;
+	case 'i':
+	    input_dim = optarg;
+	    break;
+	case 'o':
+	    output_dim = optarg;
+	    break;
+	case 'h':
+	    hidden_dim = optarg;
+	    break;
+	case 'e':
+	    epochs = optarg;
+	    break;
+	case 'l':
+	    learning_rate = optarg;
+	    break;
+	default:
+	    printf("This is a naive arg parser and is not tolerant\n");
+	    printf("of any uncertainty\n");
+	    print_help();
 	}
     }
-    return std::make_tuple(train_dir, test_dir, input_dim, output_dim, 
-	    hidden_dim, epochs, learning_rate);	
+    return std::make_tuple(train_dir, test_dir, input_dim, output_dim, hidden_dim, epochs,
+			   learning_rate);
 }
 
 void print_opts(opts &options) {

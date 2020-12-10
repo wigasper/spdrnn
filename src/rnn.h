@@ -22,8 +22,8 @@ class RNN {
     matrix bh;
     matrix by;
 
-    //matrix prior_inputs;
-    //matrix prior_hs;
+    // matrix prior_inputs;
+    // matrix prior_hs;
 
     // TODO fix this, probably should be a param input somewhere
     int bptt_stop = 20;
@@ -204,34 +204,24 @@ class RNN {
 
 	// update weights and biases, using avg of gradient updates
 	multiply_scalar(dwhh, learning_rate);
-	#pragma omp critical (whh)
-	{
-	    subtract_in_place(whh, dwhh);
-	}
+#pragma omp critical(whh)
+	{ subtract_in_place(whh, dwhh); }
 
 	multiply_scalar(dwxh, learning_rate);
-	#pragma omp critical (wxh) 
-	{
-	    subtract_in_place(wxh, dwxh);
-	}
+#pragma omp critical(wxh)
+	{ subtract_in_place(wxh, dwxh); }
 
 	multiply_scalar(dwhy, learning_rate);
-	#pragma omp critical (why)
-	{
-	    subtract_in_place(why, dwhy);
-	}
+#pragma omp critical(why)
+	{ subtract_in_place(why, dwhy); }
 
 	multiply_scalar(dbh, learning_rate);
-	#pragma omp critical (bh)
-	{
-	    subtract_in_place(bh, dbh);
-	}
+#pragma omp critical(bh)
+	{ subtract_in_place(bh, dbh); }
 
 	multiply_scalar(dby, learning_rate);
-	#pragma omp critical (by)
-	{
-	    subtract_in_place(by, dby);
-	}
+#pragma omp critical(by)
+	{ subtract_in_place(by, dby); }
     }
 
     // binary cross-entropy
@@ -275,10 +265,10 @@ class RNN {
 	return l / Y.size();
     }
 
-    void train(std::vector<matrix> &X, const std::vector<matrix> &Y, 
-	    size_t num_epochs, double learning_rate) {
-	//size_t num_epochs = 30;
-	//double learning_rate = 0.0001;
+    void train(std::vector<matrix> &X, const std::vector<matrix> &Y, size_t num_epochs,
+	       double learning_rate) {
+	// size_t num_epochs = 30;
+	// double learning_rate = 0.0001;
 
 	std::vector<double> losses;
 
@@ -295,8 +285,8 @@ class RNN {
 
 		losses.push_back(this_loss);
 	    }
-	    // for each training example
-	    #pragma omp parallel for
+// for each training example
+#pragma omp parallel for
 	    for (size_t idx = 0; idx < Y.size(); idx++) {
 		std::tuple<matrix, matrix, matrix, matrix> forward_res = forward(X.at(idx));
 
@@ -308,8 +298,7 @@ class RNN {
 
 		subtract_in_place(dldy, Y.at(idx));
 
-		backward(dldy, learning_rate, std::get<2>(forward_res), 
-			std::get<3>(forward_res));
+		backward(dldy, learning_rate, std::get<2>(forward_res), std::get<3>(forward_res));
 	    }
 	}
 
