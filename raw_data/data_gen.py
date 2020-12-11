@@ -110,11 +110,10 @@ def process_dir(dir_path):
                 response = 0
                 if in_trigger_interval(float(resp_norm[i][0]), trigger_intervals):
                     response = 1
-                out.write(f"{resp_norm[i][0]},{resp_norm[i][1]},{ecg_norm[i][1]},")
+                # this has time steps, uncomment to get these in output
+                #out.write(f"{resp_norm[i][0]},{resp_norm[i][1]},{ecg_norm[i][1]},")
+                out.write(f"{resp_norm[i][1]},{ecg_norm[i][1]},")
                 out.write(f"{skin_norm[i][1]},{response}\n")
-                #resp_norm.pop(i)
-                #ecg_norm.pop(i)
-                #skin_norm.pop(i)
        
     n_training_samples = int(5 * partition / NUM_OBS_PER_SAMP)
 
@@ -130,7 +129,9 @@ def process_dir(dir_path):
                 response = 0
                 if in_trigger_interval(float(resp_norm[i][0]), trigger_intervals):
                     response = 1
-                out.write(f"{resp_norm[i][0]},{resp_norm[i][1]},{ecg_norm[i][1]},")
+                # this has time steps, uncomment to get these in output
+                #out.write(f"{resp_norm[i][0]},{resp_norm[i][1]},{ecg_norm[i][1]},")
+                out.write(f"{resp_norm[i][1]},{ecg_norm[i][1]},")
                 out.write(f"{skin_norm[i][1]},{response}\n")
     
 
@@ -139,16 +140,4 @@ if __name__ == "__main__":
 
     for this_dir in dirs:
         process_dir(this_dir)
-#    with open("all_data", "w") as out:
-#        for idx, resp_samp in enumerate(resp_norm):
-#            response = 0
-#            if in_trigger_interval(float(resp_samp[0]), trigger_intervals):
-#                response = 1
-#            out.write(f"{idx},{resp_samp[1]},{ecg_norm[idx][1]},")
-#            out.write(f"{skin_norm[idx][1]},{response}\n")
-#    print(f"ecg len: {len(ecg_data)}")
-#    print(f"resp len: {len(resp_data)}")
-#    print(f"skin len: {len(skin_data)}")
-#    print(f"ecgn len: {len(ecg_norm)}")
-#    print(f"respn len: {len(resp_norm)}")
-#    print(f"skinn len: {len(skin_norm)}")
+
