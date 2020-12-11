@@ -26,9 +26,11 @@ class RNN {
     // matrix prior_hs;
 
     // TODO fix this, probably should be a param input somewhere
-    int bptt_stop = 20;
+    size_t bptt_stop;
 
-    RNN(size_t in_dim, size_t out_dim, size_t hid_dim) {
+    RNN(size_t in_dim, size_t out_dim, size_t hid_dim, size_t bptt_stop_val) {
+	bptt_stop = bptt_stop_val;
+
 	input_dim = in_dim;
 	output_dim = out_dim;
 	hidden_dim = hid_dim;

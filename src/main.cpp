@@ -7,10 +7,10 @@
 #include <stdlib.h>
 
 // an 'opts' tuple to make the function get_opts more readable
-// opts: prot_fp, ligand_fp, ligand_actual_fp, lj_fp, eval_bool, test_bool,
-// help_bool, num_samples
+// TODO: intention kind of backfired and this is not so cool
+// make it a map later
 typedef std::tuple<std::string, std::string, std::string, std::string, std::string, std::string,
-		   std::string>
+		   std::string, std::string>
     opts;
 
 // prints the help message
@@ -44,6 +44,7 @@ opts get_opts(int argc, char **argv) {
     std::string hidden_dim;
     std::string epochs = "30";
     std::string learning_rate = "0.0001";
+    std::string bptt_stop = "20";
 
     int c;
 
@@ -52,7 +53,8 @@ opts get_opts(int argc, char **argv) {
 	    {"train-dir", required_argument, 0, 't'},	  {"test-dir", required_argument, 0, 's'},
 	    {"input-dim", required_argument, 0, 'i'},	  {"output-dim", required_argument, 0, 'o'},
 	    {"hidden-dim", required_argument, 0, 'h'},	  {"epochs", required_argument, 0, 'e'},
-	    {"learning_rate", required_argument, 0, 'l'}, {0, 0, 0, 0}};
+	    {"learning_rate", required_argument, 0, 'l'}, {"bptt-stop", required_argument, 0, 'b'}, 
+	    {0, 0, 0, 0}};
 
 	int opt_idx = 0;
 	c = getopt_long(argc, argv, "t:s:i:o:h:e:l:", long_options, &opt_idx);
@@ -83,6 +85,9 @@ opts get_opts(int argc, char **argv) {
 	case 'l':
 	    learning_rate = optarg;
 	    break;
+	case 'b':
+	    bptt_stop = optarg;
+	    break;
 	default:
 	    printf("This is a naive arg parser and is not tolerant\n");
 	    printf("of any uncertainty\n");
@@ -90,7 +95,7 @@ opts get_opts(int argc, char **argv) {
 	}
     }
     return std::make_tuple(train_dir, test_dir, input_dim, output_dim, hidden_dim, epochs,
-			   learning_rate);
+			   learning_rate, bptt_stop);
 }
 
 void print_opts(opts &options) {
@@ -101,6 +106,7 @@ void print_opts(opts &options) {
     std::cout << "Hidden layer dim.: " << std::get<4>(options) << "\n";
     std::cout << "Num. epochs: " << std::get<5>(options) << "\n";
     std::cout << "Learning rate: " << std::get<6>(options) << "\n";
+    std::cout << "BPTT stop: " << std::get<7>(options) << "\n";
 }
 
 int main(int argc, char **argv) {
@@ -113,10 +119,11 @@ int main(int argc, char **argv) {
     size_t hidden_dim = std::stoul(std::get<4>(options));
     size_t epochs = std::stoul(std::get<5>(options));
     double learning_rate = std::stod(std::get<6>(options));
+    size_t bptt_stop = std::stoul(std::get<7>(options));
 
     print_opts(options);
 
-    RNN model = RNN(input_dim, output_dim, hidden_dim);
+    RNN model = RNN(input_dim, output_dim, hidden_dim, bptt_stop);
 
     std::cout << "Loading training data\n";
     std::tuple<std::vector<matrix>, std::vector<matrix>> load_result = load_from_dir(train_dir);
