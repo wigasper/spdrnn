@@ -69,9 +69,9 @@ class RNN {
 	for (size_t row = 0; row < x_vals.size() / x_dim; row++) {
 	    // avoid memory allocation here/
 	    matrix x_row = get_row(x, row);
-	    x_row = transpose(x_row);
+	    //x_row = transpose(x_row);
 
-	    matrix sum = dot(wxh, x_row);
+	    matrix sum = dott(wxh, x_row);
 
 	    matrix t_1 = dot(whh, h);
 	    add_in_place(sum, t_1);
@@ -83,11 +83,8 @@ class RNN {
 
 	    /// for backwards phase
 	    // possibly need to figure this out, make more efficient
-	    // matrix h_T = transpose(h);
 	    prior_hs = append_cols(prior_hs, h);
-	    // append_rows(prior_hs, h);
 
-	    // that new hotness starts right here
 	    matrix y = dot(why, h);
 	    add_in_place(y, by);
 	    // TODO: this is bad
@@ -135,7 +132,7 @@ class RNN {
 
 	    dby = get_row(dy, t_step);
 	    matrix last_h = get_col(prior_hs, t_step);
-	    add_in_place(dwhy, dot(dby, transpose(last_h)));
+	    add_in_place(dwhy, dott(dby, last_h));
 
 	    // dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
 	    matrix h_row_temp = get_col(prior_hs, t_step);
@@ -146,12 +143,12 @@ class RNN {
 	    multiply(h_row_temp, dh);
 	    add_in_place(dbh, h_row_temp);
 	    matrix h_row = get_col(prior_hs, t_step);
-	    add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
+	    add_in_place(dwhh, dott(h_row_temp, h_row));
 	    matrix prior_input = get_row(prior_inputs, t_step);
 	    // TODO: new, resolved error, but bad, fix this
 	    prior_input = transpose(prior_input);
 
-	    add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
+	    add_in_place(dwxh, dott(h_row_temp, prior_input));
 	    dh = dot(whh, h_row_temp);
 
 	    // TODO: do this better
@@ -164,7 +161,7 @@ class RNN {
 		matrix dby_temp = get_row(dy, idx);
 		matrix last_h = get_col(prior_hs, idx);
 		// matrix dwhy_temp = dot(dby, transpose(last_h));
-		add_in_place(dwhy, dot(dby, transpose(last_h)));
+		add_in_place(dwhy, dott(dby, last_h));
 
 		// dbh += (1 - get_row(prior_hs, n_rows) ** 2) * dh
 		matrix h_row_temp = get_col(prior_hs, idx);
@@ -175,13 +172,13 @@ class RNN {
 		multiply(h_row_temp, dh);
 		add_in_place(dbh, h_row_temp);
 		matrix h_row = get_col(prior_hs, idx);
-		add_in_place(dwhh, dot(h_row_temp, transpose(h_row)));
+		add_in_place(dwhh, dott(h_row_temp, h_row));
 		matrix prior_input = get_row(prior_inputs, idx);
 
 		// newnew
 		prior_input = transpose(prior_input);
 
-		add_in_place(dwxh, dot(h_row_temp, transpose(prior_input)));
+		add_in_place(dwxh, dott(h_row_temp, prior_input));
 		dh = dot(whh, h_row_temp);
 
 		// add_in_place(dwhy, dwhy_temp);

@@ -540,3 +540,44 @@ matrix load_weights_matrix(const std::string file_path, const dim m_dim, const d
 void shuffle(std::vector<matrix> matrices) {
     std::shuffle(matrices.begin(), matrices.end(), generator);
 }
+
+// A special dot function. multiplies the first matrix by the transpose
+// of the second matrix. avoids a memory allocation
+matrix dott(const matrix &a, const matrix &b) {
+    dim a_dim = std::get<1>(a);
+    std::vector<element_type> a_vals = std::get<0>(a);
+
+    dim b_dim = std::get<1>(b);
+    std::vector<element_type> b_vals = std::get<0>(b);
+    //dim b_n_rows = b_vals.size() / b_dim;
+    // num cols & rows in output matrix
+    // n_rows from a x n_cols from b
+
+    std::vector<element_type> vals_out;
+    vals_out.reserve(b_vals.size() / b_dim * a_vals.size() / a_dim);
+
+    // check to make sure conformable, a_rows = b_rows
+    if (a_dim != b_dim) {
+	// this is fairly improper
+	std::cout << "utils::dott - matrices are not comformable\n";
+
+    } else {
+	// is there a faster way to do this??
+	for (size_t a_row = 0; a_row < a_vals.size() / a_dim; a_row++) {
+	    for (size_t b_row = 0; b_row < b_vals.size() / b_dim; b_row++) {
+		element_type sum = 0;
+		
+		size_t a_idx = a_row * a_dim;
+		size_t b_idx = b_row * b_dim;
+
+		for (size_t col = 0; col < a_dim; col++) {
+		    sum += (a_vals.at(a_idx + col) * b_vals.at(b_idx + col));
+		}
+		
+		vals_out.push_back(sum);
+	    }
+	}
+    }
+    return std::make_tuple(vals_out, b_vals.size() / b_dim);
+
+}
