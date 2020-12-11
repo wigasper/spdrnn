@@ -15,20 +15,20 @@ typedef std::tuple<std::string, std::string, std::string, std::string, std::stri
 
 // prints the help message
 void print_help() {
-    printf("FLAGS\n");
-    printf("\t-e\tIf present, only RMSD between the input ligand and the\n");
-    printf("\t\tactual (ground truth) will be calculated (no docking)\n");
-    printf("\t-h\tShow help message\n");
     printf("OPTIONS\n");
-    printf("\t-p <protein fp>\tProtein file path, a PDB file with atom types\n");
-    printf("\t\t\tcorresponding to those in the Lennard-Jones params file\n");
-    printf("\t-l <ligand fp>\tLigand file path, a PDB file with atom types\n");
-    printf("\t\t\tcorresponding to those in the Lennard-Jones params file\n");
-    printf("\t-a <ligand fp>\tActual (ground truth) ligand file path,\n");
-    printf("\t\t\ta PDB file with atom types corresponding to those in the\n");
-    printf("\t\t\tLennard-Jones params file\n");
-    printf("\t-j <lj fp>\tFile path to the Lennard-Jones params file\n");
-    printf("\t-n <num>\tNumber of angles to test, default: 120\n\n");
+    printf("\t--train-dir\tPath to directory containing training data, where\n");
+    printf("\t\t\teach file in the directory contains a sample\n");
+    printf("\t--test-dir\tPath to directory containing test data, where\n");
+    printf("\t\t\teach file in the directory contains a sample. Use this\n");
+    printf("\t\t\toption without --train-dir to test only\n");
+    printf("\t--input-dim\tDimensionality of the input layer\n");
+    printf("\t--hidden-dim\tDimensionality of the hidden layer\n");
+    printf("\t--output-dim\tDimensionality of the output layer\n");
+    printf("\t--epochs\tNumber of epochs to train for, default: 30\n");
+    printf("\t--learning-rate\tValue to step decrease learning rate by\n");
+    printf("\t\t\twhen losses stall\n");
+    printf("\t--bptt-stop\tNumber of time steps to to go backwards during\n");
+    printf("\t\t\tbackpropagation at each time step\n");
 }
 
 // parses options with GNU getopt and returns them in a tuple
@@ -52,18 +52,21 @@ opts get_opts(int argc, char **argv) {
 	static struct option long_options[] = {
 	    {"train-dir", required_argument, 0, 't'},	  {"test-dir", required_argument, 0, 's'},
 	    {"input-dim", required_argument, 0, 'i'},	  {"output-dim", required_argument, 0, 'o'},
-	    {"hidden-dim", required_argument, 0, 'h'},	  {"epochs", required_argument, 0, 'e'},
-	    {"learning_rate", required_argument, 0, 'l'}, {"bptt-stop", required_argument, 0, 'b'}, 
+	    {"hidden-dim", required_argument, 0, 'd'},	  {"epochs", required_argument, 0, 'e'},
+	    {"learning-rate", required_argument, 0, 'l'}, {"bptt-stop", required_argument, 0, 'b'}, 
 	    {0, 0, 0, 0}};
 
 	int opt_idx = 0;
-	c = getopt_long(argc, argv, "t:s:i:o:h:e:l:", long_options, &opt_idx);
+	c = getopt_long(argc, argv, "ht:s:i:o:d:e:l:", long_options, &opt_idx);
 
 	if (c == -1) {
 	    break;
 	}
 
 	switch (c) {
+	case 'h':
+	    print_help();
+	    exit(EXIT_SUCCESS);
 	case 't':
 	    train_dir = optarg;
 	    break;
@@ -76,7 +79,7 @@ opts get_opts(int argc, char **argv) {
 	case 'o':
 	    output_dim = optarg;
 	    break;
-	case 'h':
+	case 'd':
 	    hidden_dim = optarg;
 	    break;
 	case 'e':
@@ -121,23 +124,32 @@ int main(int argc, char **argv) {
     double learning_rate = std::stod(std::get<6>(options));
     size_t bptt_stop = std::stoul(std::get<7>(options));
 
+    std::tuple<std::vector<matrix>, std::vector<matrix>> load_result;
+    std::vector<matrix> X;
+    std::vector<matrix> Y;
+
     print_opts(options);
 
     RNN model = RNN(input_dim, output_dim, hidden_dim, bptt_stop);
+    
+    if (!train_dir.empty()) {
+	std::cout << "Loading training data\n";
+	load_result = load_from_dir(train_dir);
+    
 
-    std::cout << "Loading training data\n";
-    std::tuple<std::vector<matrix>, std::vector<matrix>> load_result = load_from_dir(train_dir);
+	X = std::get<0>(load_result);
+	Y = std::get<1>(load_result);
 
-    std::vector<matrix> X = std::get<0>(load_result);
-    std::vector<matrix> Y = std::get<1>(load_result);
+	std::cout << "Training\n";
+	model.train(X, Y, epochs, learning_rate);
+    }
+    
+    if (!test_dir.empty()) {
+	std::cout << "Loading test data\n";
 
-    std::cout << "Training\n";
-    model.train(X, Y, epochs, learning_rate);
-
-    std::cout << "Loading test data\n";
-
-    load_result = load_from_dir(test_dir);
-    X = std::get<0>(load_result);
-    Y = std::get<1>(load_result);
-    model.test(X, Y);
+	load_result = load_from_dir(test_dir);
+	X = std::get<0>(load_result);
+	Y = std::get<1>(load_result);
+	model.test(X, Y);
+    }
 }
