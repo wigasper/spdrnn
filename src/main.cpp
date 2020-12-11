@@ -25,8 +25,7 @@ void print_help() {
     printf("\t--hidden-dim\tDimensionality of the hidden layer\n");
     printf("\t--output-dim\tDimensionality of the output layer\n");
     printf("\t--epochs\tNumber of epochs to train for, default: 30\n");
-    printf("\t--learning-rate\tValue to step decrease learning rate by\n");
-    printf("\t\t\twhen losses stall\n");
+    printf("\t--learning-rate\tInitial learning rate\n");
     printf("\t--bptt-stop\tNumber of time steps to to go backwards during\n");
     printf("\t\t\tbackpropagation at each time step\n");
 }
