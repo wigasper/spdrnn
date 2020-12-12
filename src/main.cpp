@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
     size_t hidden_dim = std::stoul(std::get<4>(options));
     size_t epochs = std::stoul(std::get<5>(options));
     double learning_rate = std::stod(std::get<6>(options));
-    size_t bptt_stop = std::stoul(std::get<7>(options));
+    size_t bptt_stop = std::stoi(std::get<7>(options));
 
     std::tuple<std::vector<matrix>, std::vector<matrix>> load_result;
     std::vector<matrix> X;
