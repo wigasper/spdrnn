@@ -25,9 +25,9 @@ void print_help() {
     printf("\t--hidden-dim\tDimensionality of the hidden layer\n");
     printf("\t--output-dim\tDimensionality of the output layer\n");
     printf("\t--epochs\tNumber of epochs to train for, default: 30\n");
-    printf("\t--learning-rate\tInitial learning rate\n");
+    printf("\t--learning-rate\tInitial learning rate, default: 0.00001\n");
     printf("\t--bptt-stop\tNumber of time steps to to go backwards during\n");
-    printf("\t\t\tbackpropagation at each time step\n");
+    printf("\t\t\tbackpropagation at each time step, default: 5\n");
 }
 
 // parses options with GNU getopt and returns them in a tuple
@@ -42,8 +42,8 @@ opts get_opts(int argc, char **argv) {
     std::string output_dim;
     std::string hidden_dim;
     std::string epochs = "30";
-    std::string learning_rate = "0.0001";
-    std::string bptt_stop = "20";
+    std::string learning_rate = "0.00001";
+    std::string bptt_stop = "5";
 
     int c;
 

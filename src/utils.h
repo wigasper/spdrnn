@@ -41,8 +41,6 @@ matrix gen_random_matrix(size_t m, size_t n, size_t prior_layer_dim) {
     element_type min = -1 * (1 / sqrt(prior_layer_dim));
     element_type max = 1 / sqrt(prior_layer_dim);
 
-    // std::random_device device;
-    // std::mt19937 generator(device());
     std::uniform_real_distribution<element_type> distribution(min, max);
 
     for (size_t _idx = 0; _idx < (m * n); _idx++) {
@@ -63,9 +61,6 @@ matrix gen_zeros_matrix(size_t m, size_t n) {
 }
 
 matrix dot(const matrix &a, const matrix &b) {
-    // print_matrix(a);
-    // print_matrix(b);
-
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
 
@@ -90,7 +85,7 @@ matrix dot(const matrix &a, const matrix &b) {
 	std::cout << "utils::dot - matrices are not comformable\n";
 	std::cout << "matrix a: " << a_0 << " x " << a_1 << "\n";
 	std::cout << "matrix b: " << b_0 << " x " << b_1 << "\n";
-
+	exit(EXIT_FAILURE);
     } else {
 	// is there a faster way to do this??
 	for (size_t row = 0; row < n_rows; row++) {
@@ -293,12 +288,9 @@ void multiply(matrix &a, const matrix &b) {
 	std::cout << "utils::multiply - matrices are not same dims\n";
 	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim << "\n";
 	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim << "\n";
-	// print_matrix(a);
-	// print_matrix(b);
     }
 }
 
-// TODO: do this in place, avoid memory allocation
 matrix append_cols(const matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
@@ -324,23 +316,6 @@ matrix append_cols(const matrix &a, const matrix &b) {
     }
 
     return std::make_tuple(vals_out, a_dim + b_dim);
-    /* sidebarring this - probably possible but all these inserts
-     * probably make it not even worth it
-    *a_dim += b_dim;
-
-    if (a_n_rows == b_n_rows) {
-	for (size_t row = 0; row < a_n_rows; row++) {
-	    // this is the idx of the end of the row
-	    size_t idx = ((row + 1) * *a_dim) - 1;
-
-	    auto iter_begin = (*a_vals).begin() + idx;
-	    auto iter_end = (*a_vals).begin() + idx + b_dim;
-	    for (auto
-	}
-
-    } else {
-	std::cout<< "utils::append_cols - a_n_rows!=b_n_rows!!!!!\n";
-    }*/
 }
 
 // used to append rows
@@ -415,11 +390,10 @@ std::vector<std::string> parse_line(std::string line) {
 }
 
 // loads in the matrix from a string representing a file path
-// TODO: currently only setup for mock data
 std::tuple<matrix, matrix> load_sample(const std::string file_path) {
     bool dimension_known = false;
     dim dimension;
-    // std::cout<<file_path<<"\n";
+    
     std::vector<element_type> x_vals;
     std::vector<element_type> y_vals;
 
@@ -437,8 +411,8 @@ std::tuple<matrix, matrix> load_sample(const std::string file_path) {
 	    dimension_known = true;
 	} else {
 	    if (elements.size() != dimension) {
-		// TODO: make this fail the program
 		printf("Not every row has same dimension as first row\n");
+		exit(EXIT_FAILURE);
 	    }
 	}
 
@@ -447,24 +421,13 @@ std::tuple<matrix, matrix> load_sample(const std::string file_path) {
 	}
 
 	y_vals.push_back(std::stod(elements.at(elements.size() - 1)));
-	// TODO: this should be more intelligent
-	// x_vals.push_back(std::stod(elements.at(1)));
-	// x_vals.push_back(std::stod(elements.at(2)));
-	// x_vals.push_back(std::stod(elements.at(3)));
-	// y_vals.push_back(std::stod(elements.at(4)));
-	// if (elements.size() == 2) {
-	// std::cout << std::stod(elements.at(0))
-	//    x_vals.push_back(std::stod(elements.at(0)));
-	//    y_vals.push_back(std::stod(elements.at(1)));
-	//}
     }
 
     matrix x = std::make_tuple(x_vals, dimension - 1);
     matrix y = std::make_tuple(y_vals, 1);
 
     file_in.close();
-    // print_matrix(x);
-    // print_matrix(y);
+    
     return std::make_tuple(x, y);
 }
 
@@ -517,8 +480,8 @@ matrix load_weights_matrix(const std::string file_path, const dim m_dim, const d
 	std::vector<std::string> elements = parse_line(line);
 
 	if (elements.size() != n_dim) {
-	    // TODO: make this fail the program
 	    printf("utils::load_weights_matrix - bad dimension\n");
+	    exit(EXIT_FAILURE);
 	}
 
 	for (std::string element : elements) {
@@ -529,8 +492,8 @@ matrix load_weights_matrix(const std::string file_path, const dim m_dim, const d
     }
 
     if (n_rows != m_dim) {
-	// TODO make this fail teh program
 	std::cout << "utils::load_weights_matrix - bad n dim\n";
+	exit(EXIT_FAILURE);
     }
     matrix m = std::make_tuple(m_vals, n_dim);
 
@@ -558,8 +521,8 @@ matrix dott(const matrix &a, const matrix &b) {
 
     // check to make sure conformable, a_rows = b_rows
     if (a_dim != b_dim) {
-	// this is fairly improper
 	std::cout << "utils::dott - matrices are not comformable\n";
+	exit(EXIT_FAILURE);
 
     } else {
 	// is there a faster way to do this??
