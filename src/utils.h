@@ -455,21 +455,27 @@ void write(const matrix &m, const std::string file_path) {
     size_t idx = 0;
 
     for (element_type val : m_vals) {
-	file_out << val << ",";
 	idx++;
-
-	if (idx % m_dim == 0) {
-	    file_out << "\n";
+	if (idx != 0 && idx % m_dim == 0) {
+	    file_out << val << "\n";	
+	    //idx++;
+	} else {
+	    file_out << val << ",";
 	}
+	//file_out << val << ",";
+	//idx++;
+
+	//if (idx % m_dim == 0) {
+	//    file_out << "\n";
+	//}
     }
-    file_out << "\n";
 
     file_out.close();
 }
 
 matrix load_weights_matrix(const std::string file_path, const dim m_dim, const dim n_dim) {
     std::vector<element_type> m_vals;
-    size_t n_rows;
+    size_t n_rows = 0;
 
     std::fstream file_in;
     file_in.open(file_path, std::ios::in);
@@ -487,14 +493,19 @@ matrix load_weights_matrix(const std::string file_path, const dim m_dim, const d
 	for (std::string element : elements) {
 	    m_vals.push_back(std::stod(element));
 	}
-
-	n_rows++;
+	
+	if (elements.size() != 0) {
+	    n_rows++;
+	}
     }
 
     if (n_rows != m_dim) {
-	std::cout << "utils::load_weights_matrix - bad n dim\n";
+	std::cout << "utils::load_weights_matrix - bad m dim\n";
 	exit(EXIT_FAILURE);
     }
+
+    file_in.close();
+
     matrix m = std::make_tuple(m_vals, n_dim);
 
     return m;

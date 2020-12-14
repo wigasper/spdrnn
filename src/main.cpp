@@ -145,7 +145,8 @@ int main(int argc, char **argv) {
     
     if (!test_dir.empty()) {
 	std::cout << "Loading test data\n";
-
+	
+	model.load_weights("weights");
 	load_result = load_from_dir(test_dir);
 	X = std::get<0>(load_result);
 	Y = std::get<1>(load_result);

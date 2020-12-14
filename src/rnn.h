@@ -280,7 +280,7 @@ class RNN {
 
 	    round(y_hat, threshold);
 	    matrix y = Y.at(idx);
-
+	    
 	    outcomes counts = count_outcomes(y, y_hat);
 
 	    true_pos += std::get<0>(counts);
@@ -289,14 +289,21 @@ class RNN {
 	    false_neg += std::get<3>(counts);
 	}
 
-	// TODO maybe this tuple is unnecessary
 	metrics test_metrics =
 	    get_metrics(std::make_tuple(true_pos, true_neg, false_pos, false_neg));
-
+	std::cout << "Class 1 Metrics:\n";	
 	std::cout << "Accuracy: " << std::get<0>(test_metrics) << "\n";
 	std::cout << "Precision: " << std::get<1>(test_metrics) << "\n";
 	std::cout << "Recall: " << std::get<2>(test_metrics) << "\n";
-	std::cout << "F1: " << std::get<3>(test_metrics) << "\n";
+	std::cout << "F1: " << std::get<3>(test_metrics) << "\n\n";
+	
+	test_metrics = get_metrics(std::make_tuple(true_neg, true_pos, false_neg, false_pos));
+	std::cout << "Class 0 Metrics:\n";
+	std::cout << "Accuracy: " << std::get<0>(test_metrics) << "\n";
+	std::cout << "Precision: " << std::get<1>(test_metrics) << "\n";
+	std::cout << "Recall: " << std::get<2>(test_metrics) << "\n";
+	std::cout << "F1: " << std::get<3>(test_metrics) << "\n\n";
+	
     }
 
     void save_weights() {
@@ -309,10 +316,10 @@ class RNN {
     }
 
     void load_weights(std::string dir_path) {
-	whh = load_weights_matrix("whh", hidden_dim, hidden_dim);
-	wxh = load_weights_matrix("wxh", hidden_dim, input_dim);
-	why = load_weights_matrix("why", output_dim, hidden_dim);
-	bh = load_weights_matrix("bh", hidden_dim, 1);
-	by = load_weights_matrix("by", output_dim, 1);
+	whh = load_weights_matrix(dir_path + "/whh", hidden_dim, hidden_dim);
+	wxh = load_weights_matrix(dir_path + "/wxh", hidden_dim, input_dim);
+	why = load_weights_matrix(dir_path + "/why", output_dim, hidden_dim);
+	bh = load_weights_matrix(dir_path + "/bh", hidden_dim, 1);
+	by = load_weights_matrix(dir_path + "/by", output_dim, 1);
     }
 };
