@@ -9,6 +9,7 @@ typedef std::tuple<std::vector<element_type>, size_t> matrix;
 // accuracy, precision, recall, f1
 typedef std::tuple<double, double, double, double> metrics;
 
+// count the outcomes given y and y_hat
 outcomes count_outcomes(const matrix &y, const matrix &y_hat) {
     std::vector<element_type> y_vals = std::get<0>(y);
     std::vector<element_type> y_hat_vals = std::get<0>(y_hat);
@@ -34,6 +35,7 @@ outcomes count_outcomes(const matrix &y, const matrix &y_hat) {
     return std::make_tuple(tp, tn, fp, fn);
 }
 
+// get the metrics based on the outcomes counts
 metrics get_metrics(const outcomes &counts) {
     double tp = std::get<0>(counts);
     double tn = std::get<1>(counts);

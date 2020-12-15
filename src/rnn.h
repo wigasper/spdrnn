@@ -6,9 +6,11 @@
 #include "eval.h"
 #include "utils.h"
 
+// matrix type
 typedef double element_type;
 typedef std::tuple<std::vector<element_type>, size_t> matrix;
 
+// RNN class
 class RNN {
   public:
     size_t input_dim;
@@ -23,7 +25,8 @@ class RNN {
     matrix by;
 
     int bptt_stop;
-
+    
+    // constructor
     RNN(size_t in_dim, size_t out_dim, size_t hid_dim, int bptt_stop_val) {
 	bptt_stop = bptt_stop_val;
 
@@ -39,7 +42,7 @@ class RNN {
 	by = gen_zeros_matrix(output_dim, 1);
     }
 
-    // y is dim output_dim x 1
+    // make a forward pass through the RNN
     std::tuple<matrix, matrix, matrix, matrix> forward(const matrix &x) {
 	size_t whh_n_rows = std::get<0>(whh).size() / std::get<1>(whh);
 	matrix h = gen_zeros_matrix(whh_n_rows, 1);
@@ -81,7 +84,8 @@ class RNN {
 
 	return std::make_tuple(std::make_tuple(y_vals, 1), h, prior_hs, prior_inputs);
     }
-
+    
+    // make a backward pass through the RNN
     // dy has dim n_samples x output_dim
     void backward(matrix &dy, double learning_rate, matrix &prior_hs, matrix &prior_inputs) {
 	size_t n_rows = std::get<0>(prior_inputs).size() / std::get<1>(prior_inputs);
@@ -184,7 +188,7 @@ class RNN {
 	{ subtract_in_place(by, dby); }
     }
 
-    // binary cross-entropy
+    // binary cross-entropy loss function
     // y dim = (output_dim x 1)
     // forward output dim = (output_dim x 1)
     double loss(const matrix &x, const matrix &y) {
@@ -213,7 +217,8 @@ class RNN {
 
 	return -1 * loss / y_vals.size();
     }
-
+    
+    // calculate total loss for a dataset
     double total_loss(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
 	double l = 0.0;
 
@@ -224,6 +229,8 @@ class RNN {
 	return l / Y.size();
     }
 
+    // training algorithm. for each epoch, perform BPTT algo for each sample
+    // anneal learning rate if loss is greater than prior epoch loss
     void train(std::vector<matrix> &X, const std::vector<matrix> &Y, size_t num_epochs,
 	       double learning_rate) {
 
@@ -242,12 +249,12 @@ class RNN {
 
 		losses.push_back(this_loss);
 	    }
-// for each training example
+	    // for each training example
 #pragma omp parallel for
 	    for (size_t idx = 0; idx < Y.size(); idx++) {
+		// tuple is y, h, prior_hs, prior_inputs
 		std::tuple<matrix, matrix, matrix, matrix> forward_res = forward(X.at(idx));
 
-		// tuple is y, h
 		matrix dldy = std::get<0>(forward_res);
 		sigmoid(dldy);
 
@@ -261,7 +268,8 @@ class RNN {
 
 	save_weights();
     }
-
+    
+    // test function
     void test(const std::vector<matrix> &X, const std::vector<matrix> &Y) {
 	size_t true_pos = 0;
 	size_t true_neg = 0;
@@ -297,6 +305,7 @@ class RNN {
 	std::cout << "Recall: " << std::get<2>(test_metrics) << "\n";
 	std::cout << "F1: " << std::get<3>(test_metrics) << "\n\n";
 	
+	// get class 0 metrics by swapping counts	
 	test_metrics = get_metrics(std::make_tuple(true_neg, true_pos, false_neg, false_pos));
 	std::cout << "Class 0 Metrics:\n";
 	std::cout << "Accuracy: " << std::get<0>(test_metrics) << "\n";
@@ -305,7 +314,8 @@ class RNN {
 	std::cout << "F1: " << std::get<3>(test_metrics) << "\n\n";
 	
     }
-
+    
+    // saves the weights
     void save_weights() {
 	fs::create_directory("weights");
 	write(whh, "weights/whh");
@@ -314,7 +324,8 @@ class RNN {
 	write(bh, "weights/bh");
 	write(by, "weights/by");
     }
-
+    
+    // loads the weights
     void load_weights(std::string dir_path) {
 	whh = load_weights_matrix(dir_path + "/whh", hidden_dim, hidden_dim);
 	wxh = load_weights_matrix(dir_path + "/wxh", hidden_dim, input_dim);

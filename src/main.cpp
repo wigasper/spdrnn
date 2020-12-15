@@ -1,6 +1,5 @@
 //#include "utils.h"
 #include "rnn.h"
-#include "test.h"
 
 #include <getopt.h>
 #include <stdio.h>
@@ -26,7 +25,7 @@ void print_help() {
     printf("\t--output-dim\tDimensionality of the output layer\n");
     printf("\t--epochs\tNumber of epochs to train for, default: 30\n");
     printf("\t--learning-rate\tInitial learning rate, default: 0.00001\n");
-    printf("\t--bptt-stop\tNumber of time steps to to go backwards during\n");
+    printf("\t--bptt-stop\tNumber of time steps to go backwards during\n");
     printf("\t\t\tbackpropagation at each time step, default: 5\n");
 }
 
@@ -100,6 +99,7 @@ opts get_opts(int argc, char **argv) {
 			   learning_rate, bptt_stop);
 }
 
+// prints the options for records
 void print_opts(opts &options) {
     std::cout << "Train data dir.: " << std::get<0>(options) << "\n";
     std::cout << "Test data dir.: " << std::get<1>(options) << "\n";
@@ -111,8 +111,8 @@ void print_opts(opts &options) {
     std::cout << "BPTT stop: " << std::get<7>(options) << "\n";
 }
 
+// main routine
 int main(int argc, char **argv) {
-    // test_routine();
     opts options = get_opts(argc, argv);
     std::string train_dir = std::get<0>(options);
     std::string test_dir = std::get<1>(options);

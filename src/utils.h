@@ -18,6 +18,7 @@ typedef std::tuple<std::vector<element_type>, dim> matrix;
 std::random_device RANDOM_DEVICE;
 std::mt19937 generator(RANDOM_DEVICE());
 
+// prints the matrix, currently only used for debugging
 void print_matrix(const matrix &m) {
     std::vector<element_type> vals = std::get<0>(m);
     dim dimension = std::get<1>(m);
@@ -35,6 +36,7 @@ void print_matrix(const matrix &m) {
     std::cout << "\n";
 }
 
+// generates a random matrix appropriate for the tanh activation function
 matrix gen_random_matrix(size_t m, size_t n, size_t prior_layer_dim) {
     std::vector<element_type> vals_out;
 
@@ -50,6 +52,7 @@ matrix gen_random_matrix(size_t m, size_t n, size_t prior_layer_dim) {
     return std::make_tuple(vals_out, n);
 }
 
+// generates a matrix of 0s
 matrix gen_zeros_matrix(size_t m, size_t n) {
     std::vector<element_type> vals_out;
 
@@ -60,6 +63,7 @@ matrix gen_zeros_matrix(size_t m, size_t n) {
     return std::make_tuple(vals_out, n);
 }
 
+// matrix multiplication
 matrix dot(const matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
@@ -118,6 +122,7 @@ void tanh_e_wise(matrix &a) {
     }
 }
 
+// transposes a matrix
 matrix transpose(matrix &m) {
     std::vector<element_type> m_vals = std::get<0>(m);
     dim m_dim = std::get<1>(m);
@@ -135,6 +140,7 @@ matrix transpose(matrix &m) {
     return std::make_tuple(vals_out, n_rows);
 }
 
+// gets row i from matrix m
 // returns a 1xn matrix
 matrix get_row(const matrix &m, const size_t &i) {
     std::vector<element_type> vec_out;
@@ -152,6 +158,7 @@ matrix get_row(const matrix &m, const size_t &i) {
     return std::make_tuple(vec_out, m_dim);
 }
 
+// gets col j from matrix m
 // returns a mx1 matrix
 matrix get_col(const matrix &m, const size_t &j) {
     std::vector<element_type> vals_out;
@@ -168,6 +175,7 @@ matrix get_col(const matrix &m, const size_t &j) {
     return std::make_tuple(vals_out, 1);
 }
 
+// sigmoid activation function
 void sigmoid(matrix &a) {
     std::vector<element_type> *a_vals = &std::get<0>(a);
 
@@ -176,24 +184,8 @@ void sigmoid(matrix &a) {
     }
 }
 
-void softmax_in_place(matrix &a) {
-    std::vector<element_type> *a_vals = &std::get<0>(a);
-
-    for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	(*a_vals).at(idx) = exp((*a_vals).at(idx));
-    }
-
-    double sum = 0.0;
-
-    for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	sum += (*a_vals).at(idx);
-    }
-
-    for (size_t idx = 0; idx < (*a_vals).size(); idx++) {
-	(*a_vals).at(idx) = (*a_vals).at(idx) / sum;
-    }
-}
-
+// adds matrix b to matrix a element wise without allocating
+// new memory. a is lost 
 void add_in_place(matrix &a, const matrix &b) {
     dim *a_dim = &std::get<1>(a);
     std::vector<element_type> *a_vals = &std::get<0>(a);
@@ -211,9 +203,12 @@ void add_in_place(matrix &a, const matrix &b) {
 	std::cout << "utils::add_in_place - matrices are not same dims\n";
 	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim << "\n";
 	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim << "\n";
+	exit(EXIT_FAILURE);
     }
 }
 
+// subtracts matrix b from matrix a element wise without allocating 
+// new memory. a is lost
 void subtract_in_place(matrix &a, const matrix &b) {
     dim *a_dim = &std::get<1>(a);
     std::vector<element_type> *a_vals = &std::get<0>(a);
@@ -231,9 +226,11 @@ void subtract_in_place(matrix &a, const matrix &b) {
 	std::cout << "utils::subtract_in_place - matrices are not same dims\n";
 	std::cout << "matrix a: " << (*a_vals).size() / *a_dim << " x " << *a_dim << "\n";
 	std::cout << "matrix b: " << b_vals.size() / b_dim << " x " << b_dim << "\n";
+	exit(EXIT_FAILURE);
     }
 }
 
+// element-wise clipping for all values in m
 void clip(matrix &m, element_type min, element_type max) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
@@ -246,6 +243,7 @@ void clip(matrix &m, element_type min, element_type max) {
     }
 }
 
+// take all elements in the matrix to the power power
 void pow_e_wise(matrix &m, const double power) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
@@ -254,6 +252,7 @@ void pow_e_wise(matrix &m, const double power) {
     }
 }
 
+// add a scalar to all values in the matrix
 void add_scalar(matrix &m, const double scalar) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
@@ -262,6 +261,7 @@ void add_scalar(matrix &m, const double scalar) {
     }
 }
 
+// multiply all values in the matrix m by a scalar
 void multiply_scalar(matrix &m, const double scalar) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
@@ -291,6 +291,7 @@ void multiply(matrix &a, const matrix &b) {
     }
 }
 
+// append b columns to a, returning a new matrix
 matrix append_cols(const matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
     std::vector<element_type> a_vals = std::get<0>(a);
@@ -318,7 +319,8 @@ matrix append_cols(const matrix &a, const matrix &b) {
     return std::make_tuple(vals_out, a_dim + b_dim);
 }
 
-// used to append rows
+// append b rows to a without allocating memory for an entire 
+// new matrix, a is lost
 void append_rows(matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
     std::vector<element_type> *a_vals = &std::get<0>(a);
@@ -335,6 +337,7 @@ void append_rows(matrix &a, const matrix &b) {
     }
 }
 
+// round all the values in m based on a rounding threshold
 void round(matrix &m, const double &threshold) {
     std::vector<element_type> *m_vals = &std::get<0>(m);
 
@@ -347,6 +350,7 @@ void round(matrix &m, const double &threshold) {
     }
 }
 
+// trims whitespace from a string
 std::string trim_whitespace(std::string a_string) {
     size_t first = a_string.find_first_not_of(' ');
     if (first == std::string::npos) {
@@ -431,6 +435,7 @@ std::tuple<matrix, matrix> load_sample(const std::string file_path) {
     return std::make_tuple(x, y);
 }
 
+// loads dataets from the directory passed as dir_path
 std::tuple<std::vector<matrix>, std::vector<matrix>> load_from_dir(const std::string dir_path) {
     std::vector<matrix> X;
     std::vector<matrix> Y;
@@ -445,6 +450,7 @@ std::tuple<std::vector<matrix>, std::vector<matrix>> load_from_dir(const std::st
     return std::make_tuple(X, Y);
 }
 
+// write a matrix to file
 void write(const matrix &m, const std::string file_path) {
     std::ofstream file_out;
     file_out.open(file_path);
@@ -458,21 +464,15 @@ void write(const matrix &m, const std::string file_path) {
 	idx++;
 	if (idx != 0 && idx % m_dim == 0) {
 	    file_out << val << "\n";	
-	    //idx++;
 	} else {
 	    file_out << val << ",";
 	}
-	//file_out << val << ",";
-	//idx++;
-
-	//if (idx % m_dim == 0) {
-	//    file_out << "\n";
-	//}
     }
 
     file_out.close();
 }
 
+// loads a weights matrix
 matrix load_weights_matrix(const std::string file_path, const dim m_dim, const dim n_dim) {
     std::vector<element_type> m_vals;
     size_t n_rows = 0;
@@ -511,11 +511,13 @@ matrix load_weights_matrix(const std::string file_path, const dim m_dim, const d
     return m;
 }
 
+// randomly shuffle a vector of matrices
 void shuffle(std::vector<matrix> matrices) {
     std::shuffle(matrices.begin(), matrices.end(), generator);
 }
 
-// A special dot function. multiplies the first matrix by the transpose
+// A special matrix multiplication function. 
+// multiplies the first matrix by the transpose
 // of the second matrix. avoids a memory allocation
 matrix dott(const matrix &a, const matrix &b) {
     dim a_dim = std::get<1>(a);
@@ -523,9 +525,6 @@ matrix dott(const matrix &a, const matrix &b) {
 
     dim b_dim = std::get<1>(b);
     std::vector<element_type> b_vals = std::get<0>(b);
-    //dim b_n_rows = b_vals.size() / b_dim;
-    // num cols & rows in output matrix
-    // n_rows from a x n_cols from b
 
     std::vector<element_type> vals_out;
     vals_out.reserve(b_vals.size() / b_dim * a_vals.size() / a_dim);
@@ -553,5 +552,4 @@ matrix dott(const matrix &a, const matrix &b) {
 	}
     }
     return std::make_tuple(vals_out, b_vals.size() / b_dim);
-
 }
